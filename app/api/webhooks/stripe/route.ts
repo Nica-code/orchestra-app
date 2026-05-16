@@ -4,17 +4,17 @@ import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase-server';
 import { planTypeFromPriceId } from '@/lib/stripe-prices';
 import { PLAN_CONFIG } from '@/lib/plans';
+import { resetBillingPeriod } from '@/lib/usage';
 import { notifyPaymentFailed, notifyTrialEnding } from '@/lib/notifications';
 
 export const runtime = 'nodejs';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+const RANK: Record<string, number> = { starter: 0, pro: 1 };
 
 async function findPlanByCustomer(customerId: string) {
   const admin = createAdminClient();
-  const { data } = await admin.from('plans').select('*')
-    .eq('stripe_customer_id', customerId)
-    .maybeSingle();
+  const { data } = await admin.from('plans').select('*').eq('stripe_customer_id', customerId).maybeSingle();
   return { admin, plan: data };
 }
 
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
 
   const admin = createAdminClient();
 
+  // Idempotency — skip events we've already processed.
+  const { data: existing } = await admin
+    .from('stripe_webhook_events').select('id').eq('stripe_event_id', event.id).maybeSingle();
+  if (existing) return NextResponse.json({ received: true, duplicate: true });
+
   try {
     switch (event.type) {
       case 'customer.subscription.created':
@@ -41,19 +46,35 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const priceId = sub.items.data[0]?.price.id;
         const planType = planTypeFromPriceId(priceId);
-        const status = sub.status === 'trialing' ? 'trialing'
+        const status = sub.cancel_at_period_end ? 'cancelling'
+          : sub.status === 'trialing' ? 'trialing'
           : sub.status === 'active' ? 'active'
           : sub.status === 'past_due' ? 'past_due'
           : sub.status === 'canceled' ? 'cancelled'
           : sub.status === 'paused' ? 'past_due'
           : 'trialing';
 
+        const { plan } = await findPlanByCustomer(sub.customer as string);
+        const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end;
         const update: Record<string, unknown> = {
           status,
           stripe_subscription_id: sub.id,
+          stripe_price_id: priceId,
           trial_ends_at: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+          cancels_at: sub.cancel_at_period_end && periodEnd
+            ? new Date(periodEnd * 1000).toISOString() : null,
         };
-        if (planType) {
+        if (planType && plan) {
+          const isDowngrade = RANK[planType] < RANK[plan.plan_type];
+          if (isDowngrade) {
+            // Keep current limit until period end; resetBillingPeriod applies it.
+            update.pending_plan_type = planType;
+          } else {
+            update.plan_type = planType;
+            update.send_limit = PLAN_CONFIG[planType].sendLimit;
+            update.pending_plan_type = null;
+          }
+        } else if (planType && !plan) {
           update.plan_type = planType;
           update.send_limit = PLAN_CONFIG[planType].sendLimit;
         }
@@ -67,12 +88,24 @@ export async function POST(req: NextRequest) {
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        await admin.from('plans').update({
-          status: 'active',
-          send_count: 0,
-          billing_period_start: new Date().toISOString(),
-          payment_failed: false,
-        }).eq('stripe_customer_id', invoice.customer as string);
+        const customerId = invoice.customer as string;
+        const { plan } = await findPlanByCustomer(customerId);
+
+        await admin.from('plans').update({ status: 'active', payment_failed: false })
+          .eq('stripe_customer_id', customerId);
+
+        // A renewal (not the first invoice) starts a fresh billing period.
+        if (invoice.billing_reason === 'subscription_cycle' && plan) {
+          await resetBillingPeriod(plan.organization_id);
+        }
+        // Sync the period window from the Stripe invoice line.
+        const line = invoice.lines.data[0];
+        if (line?.period && plan) {
+          await admin.from('plans').update({
+            billing_period_start: new Date(line.period.start * 1000).toISOString(),
+            billing_period_end: new Date(line.period.end * 1000).toISOString(),
+          }).eq('stripe_customer_id', customerId);
+        }
         break;
       }
       case 'invoice.payment_failed': {
@@ -113,8 +146,14 @@ export async function POST(req: NextRequest) {
       default:
         console.log('[stripe-webhook] unhandled:', event.type);
     }
+
+    // Record the event as processed (idempotency).
+    await admin.from('stripe_webhook_events').insert({
+      stripe_event_id: event.id, event_type: event.type,
+    });
   } catch (err) {
     console.error('[stripe-webhook] handler error:', err);
+    // Return 500 so Stripe retries.
     return NextResponse.json({ error: 'Handler error' }, { status: 500 });
   }
 

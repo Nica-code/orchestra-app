@@ -285,11 +285,31 @@ export interface ActivityLogWithManager extends ActivityLog {
   manager_name: string | null;
 }
 
-export interface Usage {
+// Usage history row (DB-backed).
+export interface UsageHistory {
   id: UUID;
   organization_id: UUID;
-  period_start: Timestamp;
-  period_end: Timestamp;
-  sends_used: number;
+  billing_period_start: Timestamp;
+  billing_period_end: Timestamp;
+  plan_type: string;
+  send_limit: number;
+  send_count: number;
+  overage_count: number;
+  overage_charged: boolean;
+  overage_amount_cents: number;
   created_at: Timestamp;
+}
+
+// Computed usage summary DTO (camelCase — not a DB row).
+export interface UsageSummary {
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  planType: string;
+  sendCount: number;
+  sendLimit: number;
+  overageCount: number;
+  percentageUsed: number;
+  remainingSends: number;
+  isOverLimit: boolean;
+  daysRemainingInPeriod: number;
 }

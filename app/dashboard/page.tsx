@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireManager } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase-server';
 import { getDashboardStats, getRecentActivity } from '@/lib/dashboardStats';
+import { getCurrentUsage } from '@/lib/usage';
 import { formatConcertDateShort } from '@/lib/concertDates';
 import { Button } from '@/components/ui/Button';
 
@@ -17,10 +18,13 @@ export default async function DashboardHome() {
   const { organization } = await requireManager();
   const admin = createAdminClient();
 
-  const [stats, activity] = await Promise.all([
+  const [stats, activity, usage] = await Promise.all([
     getDashboardStats(organization.id),
     getRecentActivity(organization.id, 10),
+    getCurrentUsage(organization.id),
   ]);
+  const usageColor = usage.percentageUsed >= 100 ? 'bg-red-500'
+    : usage.percentageUsed >= 80 ? 'bg-yellow-500' : 'bg-green-500';
 
   const { data: concerts } = await admin
     .from('concerts')
@@ -61,6 +65,26 @@ export default async function DashboardHome() {
           </Link>
         ))}
       </div>
+
+      {/* Usage widget */}
+      <Link href="/dashboard/settings/billing"
+        className="block rounded-lg border border-slate-200 bg-white p-5 hover:border-indigo-300">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-slate-900">Monthly Sends</p>
+          <span className="text-xs text-slate-400">Resets in {usage.daysRemainingInPeriod} days</span>
+        </div>
+        <div className="mt-2 h-2.5 w-full rounded-full bg-slate-100">
+          <div className={`h-2.5 rounded-full ${usageColor}`} style={{ width: `${Math.min(100, usage.percentageUsed)}%` }} />
+        </div>
+        <p className="mt-2 text-sm text-slate-700">{usage.sendCount} / {usage.sendLimit} sends used</p>
+        {usage.isOverLimit ? (
+          <p className="mt-1 text-sm text-red-600">
+            Over limit by {usage.overageCount} — overage charges apply. Upgrade for more →
+          </p>
+        ) : usage.percentageUsed >= 80 ? (
+          <p className="mt-1 text-sm text-yellow-700">You&apos;re close to your limit. Upgrade to Pro →</p>
+        ) : null}
+      </Link>
 
       <div className="flex flex-wrap gap-2">
         <Link href="/dashboard/concerts/new"><Button>New Concert</Button></Link>

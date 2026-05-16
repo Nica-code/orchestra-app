@@ -16,6 +16,7 @@ import {
   notifySendLimitWarning, notifySendLimitReached,
 } from './notifications';
 import { logActivity } from './activityLogger';
+import { incrementSendCount } from './usage';
 import type { EmailAttachment } from './mime';
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -109,11 +110,7 @@ export async function startSending(concertPositionId: string, managerId: string)
     return { ok: false, error: 'This position has no email template. Edit the position to choose one.' };
   }
 
-  const { data: plan } = await admin.from('plans').select('send_count, send_limit')
-    .eq('organization_id', ctx.organization.id).maybeSingle();
-  if (plan && plan.send_count >= plan.send_limit) {
-    return { ok: false, error: 'You have reached your monthly send limit. Upgrade your plan to send more.' };
-  }
+  // Note: we never hard-block on the send limit — overage is charged instead.
 
   await admin.from('concert_positions').update({ status: 'active' }).eq('id', concertPositionId);
   log('startSending', { concertPositionId, managerId });
@@ -314,14 +311,15 @@ export async function sendToNextMusician(
   await admin.from('concert_position_musicians')
     .update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', eligible.id);
 
-  // increment send_count + monitor send limits
-  const { data: plan } = await admin.from('plans').select('id, send_count, send_limit, plan_type, billing_period_start')
-    .eq('organization_id', ctx.organization.id).maybeSingle();
-  if (plan) {
-    const newCount = (plan.send_count ?? 0) + 1;
-    await admin.from('plans').update({ send_count: newCount }).eq('id', plan.id);
-    await checkSendLimits(ctx.organization.id, managerId, newCount, plan.send_limit ?? 0,
-      plan.plan_type ?? 'starter', plan.billing_period_start ?? null);
+  // increment send_count atomically + monitor send limits
+  const { newCount } = await incrementSendCount(ctx.organization.id);
+  {
+    const { data: plan } = await admin.from('plans').select('send_limit, plan_type, billing_period_start')
+      .eq('organization_id', ctx.organization.id).maybeSingle();
+    if (plan) {
+      await checkSendLimits(ctx.organization.id, managerId, newCount, plan.send_limit ?? 0,
+        plan.plan_type ?? 'starter', plan.billing_period_start ?? null);
+    }
   }
 
   await logActivity({
