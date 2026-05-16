@@ -134,10 +134,16 @@ export interface TemplateAttachment {
   id: UUID;
   template_id: UUID;
   file_name: string;
-  file_path: string; // path in Supabase Storage
+  file_url: string; // public URL in Supabase Storage
   file_size: number;
-  mime_type: string | null;
+  mime_type: string;
   created_at: Timestamp;
+}
+
+// Template with attachment metadata for list/detail views
+export interface EmailTemplateWithMeta extends EmailTemplate {
+  attachment_count?: number;
+  attachments?: TemplateAttachment[];
 }
 
 export interface Concert {
