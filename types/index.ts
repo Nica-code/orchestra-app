@@ -100,8 +100,8 @@ export interface MusicianWithStatus extends Musician {
 
 export interface EmailIntegration {
   id: UUID;
-  organization_id: UUID;
   manager_id: UUID;
+  organization_id: UUID;
   provider: EmailProvider;
   email_address: string;
   access_token: string | null;
@@ -109,9 +109,13 @@ export interface EmailIntegration {
   token_expires_at: Timestamp | null;
   smtp_host: string | null;
   smtp_port: number | null;
+  smtp_secure: boolean | null;
   smtp_username: string | null;
-  smtp_password: string | null;
-  created_at: Timestamp;
+  smtp_password_encrypted: string | null;
+  smtp_password_iv: string | null;
+  smtp_from_name: string | null;
+  is_active: boolean;
+  connected_at: Timestamp;
   updated_at: Timestamp;
 }
 

@@ -4,6 +4,7 @@ import { useState, ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { TrialBanner } from './TrialBanner';
+import { EmailBanner } from './EmailBanner';
 
 interface Props {
   children: ReactNode;
@@ -20,6 +21,7 @@ export function DashboardShell({ children, organizationName, logoUrl, managerEma
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <div className="flex flex-1 flex-col">
         {trialDaysLeft !== null && trialDaysLeft > 0 && <TrialBanner daysLeft={trialDaysLeft} />}
+        <EmailBanner />
         <Header
           organizationName={organizationName}
           logoUrl={logoUrl}

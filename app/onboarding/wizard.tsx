@@ -171,16 +171,17 @@ function Step2Email({ onNext, busy }: { onNext: () => void; busy: boolean }) {
       <h1 className="text-2xl font-bold">Connect your email</h1>
       <p className="mt-1 text-slate-600">Sends will come from your address so musicians recognize you.</p>
       <div className="mt-6 space-y-3">
-        <button disabled className="flex w-full items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-left opacity-60">
+        <a href="/api/auth/gmail" className="flex w-full items-center gap-3 rounded-md border border-slate-200 px-4 py-3 text-left hover:bg-slate-50">
           <Mail className="h-5 w-5" />
           <span className="flex-1">Connect Gmail / Google Workspace</span>
-          <span className="text-xs text-slate-500">Coming soon</span>
-        </button>
-        <button disabled className="flex w-full items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-left opacity-60">
+        </a>
+        <a href="/api/auth/outlook" className="flex w-full items-center gap-3 rounded-md border border-slate-200 px-4 py-3 text-left hover:bg-slate-50">
           <Mail className="h-5 w-5" />
           <span className="flex-1">Connect Outlook / Microsoft 365</span>
-          <span className="text-xs text-slate-500">Coming soon</span>
-        </button>
+        </a>
+        <a href="/dashboard/settings/email" className="block text-center text-sm text-indigo-600 hover:underline">
+          Or use another provider (SMTP) in Settings
+        </a>
       </div>
       <div className="mt-6 flex items-center justify-between">
         <button onClick={onNext} className="text-sm text-slate-600 hover:underline">Skip for now</button>
