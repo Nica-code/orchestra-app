@@ -206,20 +206,26 @@ export interface ConcertWithPositions extends Concert {
   positions?: ConcertPosition[];
 }
 
+export type SendLogStatus = 'sent' | 'accepted' | 'declined' | 'no_response' | 'failed' | 'skipped';
+
 export interface SendLog {
   id: UUID;
-  concert_position_id: UUID;
-  musician_id: UUID;
-  manager_id: UUID;
-  template_id: UUID | null;
-  subject: string;
-  body: string;
-  status: SendStatus;
-  unique_token: string; // for accept/decline links
+  concert_position_id: UUID | null;
+  concert_position_musician_id: UUID | null;
+  musician_id: UUID | null;
+  organization_id: UUID | null;
+  status: SendLogStatus;
+  token: string;
+  token_expires_at: Timestamp;
+  token_used_at: Timestamp | null;
   sent_at: Timestamp | null;
   responded_at: Timestamp | null;
-  error_message: string | null;
+  email_subject: string | null;
+  email_body: string | null;
+  manager_id: UUID | null;
+  failure_reason: string | null;
   created_at: Timestamp;
+  updated_at: Timestamp;
 }
 
 export interface Notification {

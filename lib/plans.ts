@@ -28,3 +28,17 @@ export function daysRemaining(iso: string | null): number {
 export function managerLimit(planType: PlanType) {
   return PLAN_CONFIG[planType].managerLimit;
 }
+
+export interface SendAllowance {
+  allowed: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+/** Checks whether the org has sends remaining this billing period. */
+export function checkSendAllowance(plan: { send_count: number; send_limit: number }): SendAllowance {
+  const used = plan.send_count ?? 0;
+  const limit = plan.send_limit ?? 0;
+  return { allowed: used < limit, used, limit, remaining: Math.max(0, limit - used) };
+}

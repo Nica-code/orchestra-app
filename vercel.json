@@ -8,5 +8,11 @@
     "app/api/**/*.ts": {
       "runtime": "nodejs20.x"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/check-deadlines",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

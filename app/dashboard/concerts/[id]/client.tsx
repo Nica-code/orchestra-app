@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, MapPin, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { ConfirmDialog } from '@/components/ui/Modal';
+import { Modal, ConfirmDialog } from '@/components/ui/Modal';
 import { AddEditPositionModal } from '@/components/concerts/AddEditPositionModal';
 import { formatFullSchedule } from '@/lib/concertDates';
 import type { Concert, ConcertPosition } from '@/types';
@@ -40,13 +40,47 @@ interface Props {
   positionNames: string[];
 }
 
+interface SendStatus {
+  position_status: string;
+  current_musician: { name: string; email: string; sent_at: string | null } | null;
+  time_remaining: string | null;
+  total_contacted: number;
+  total_available: number;
+  auto_resend_enabled: boolean;
+}
+
 export function ConcertDetailClient({ concert, positions, summaries, positionNames }: Props) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPosition, setEditingPosition] = useState<ConcertPosition | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ConcertPosition | null>(null);
+  const [startTarget, setStartTarget] = useState<ConcertPosition | null>(null);
+  const [firstMusician, setFirstMusician] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [statuses, setStatuses] = useState<Record<string, SendStatus>>({});
 
   const refresh = () => router.refresh();
+
+  // Poll send status for active positions every 30s
+  const loadStatuses = useCallback(async () => {
+    const active = positions.filter((p) => p.status === 'active');
+    const next: Record<string, SendStatus> = {};
+    await Promise.all(active.map(async (p) => {
+      try {
+        const r = await fetch(`/api/send/status/${p.id}`);
+        if (r.ok) next[p.id] = await r.json();
+      } catch { /* ignore */ }
+    }));
+    setStatuses(next);
+  }, [positions]);
+
+  useEffect(() => {
+    loadStatuses();
+    const hasActive = positions.some((p) => p.status === 'active');
+    if (!hasActive) return;
+    const t = setInterval(loadStatuses, 30000);
+    return () => clearInterval(t);
+  }, [loadStatuses, positions]);
 
   const deletePosition = async (p: ConcertPosition) => {
     const res = await fetch(`/api/concerts/${concert.id}/positions/${p.id}`, { method: 'DELETE' });
@@ -55,6 +89,60 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
     toast.success('Position removed');
     refresh();
   };
+
+  const openStartDialog = async (p: ConcertPosition) => {
+    setStartTarget(p);
+    setFirstMusician(null);
+    try {
+      const r = await fetch(`/api/concerts/${concert.id}/positions/${p.id}/musicians`);
+      const d = await r.json();
+      const first = (d.musicians ?? [])[0];
+      if (first) setFirstMusician(`${first.first_name} ${first.last_name}`);
+    } catch { /* ignore */ }
+  };
+
+  const confirmStart = async () => {
+    if (!startTarget) return;
+    setBusy(true);
+    try {
+      const res = await fetch('/api/send/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concertPositionId: startTarget.id }),
+      });
+      const b = await res.json();
+      if (!res.ok) { toast.error(b.error || 'Failed to start sending'); return; }
+      if (b.sent) toast.success(`Email sent to ${b.musicianName}`);
+      else toast.warning(b.reason === 'exhausted' ? 'No eligible musicians on the list' : (b.reason || 'Nothing sent'));
+      setStartTarget(null);
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendNext = async (p: ConcertPosition) => {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/send/next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concertPositionId: p.id }),
+      });
+      const b = await res.json();
+      if (!res.ok) { toast.error(b.error || 'Failed to send'); return; }
+      if (b.sent) toast.success(`Email sent to ${b.musicianName}`);
+      else toast.warning(b.reason === 'exhausted' ? 'No more eligible musicians' : (b.reason || 'Nothing sent'));
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deadlineText = (p: ConcertPosition) =>
+    p.response_deadline_type === 'specific_date' && p.response_deadline_date
+      ? `By ${new Date(p.response_deadline_date).toLocaleString()}`
+      : `${p.response_deadline_days ?? 2} days after each send`;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -99,7 +187,10 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
           <div className="space-y-3">
             {positions.map((p) => {
               const s = summaries[p.id] ?? { total: 0, sent: 0, accepted: 0, declined: 0 };
+              const live = statuses[p.id];
               const started = p.status !== 'pending';
+              const awaitingManual = p.status === 'active' && !p.auto_resend_enabled
+                && live && !live.current_musician;
               return (
                 <div key={p.id} className="rounded-lg border border-slate-200 bg-white p-5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -134,9 +225,14 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
                       {p.status === 'filled' && s.acceptedName ? (
                         <p>✓ Filled by {s.acceptedName}</p>
                       ) : p.status === 'exhausted' ? (
-                        <p>⚠ All {s.total} musicians contacted — none available</p>
+                        <p>⚠ All musicians contacted — none available</p>
+                      ) : live && live.current_musician ? (
+                        <p>
+                          Awaiting response from {live.current_musician.name} ·{' '}
+                          {live.time_remaining ?? ''} · contacted {live.total_contacted} of {live.total_available}
+                        </p>
                       ) : (
-                        <p>Contacted {s.sent} of {s.total} musicians</p>
+                        <p>Contacted {live?.total_contacted ?? s.sent} of {live?.total_available ?? s.total} musicians</p>
                       )}
                     </div>
                   )}
@@ -144,9 +240,10 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
                   {/* Footer */}
                   <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
                     {p.status === 'pending' && (
-                      <Button size="sm" onClick={() => toast.info('The send engine arrives in Part 7.')}>
-                        Start Sending
-                      </Button>
+                      <Button size="sm" onClick={() => openStartDialog(p)}>Start Sending</Button>
+                    )}
+                    {awaitingManual && (
+                      <Button size="sm" onClick={() => sendNext(p)} loading={busy}>Send to Next Musician</Button>
                     )}
                     {started && (
                       <Link href={`/dashboard/concerts/${concert.id}/positions/${p.id}/log`}>
@@ -179,6 +276,26 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
         confirmLabel="Remove"
         danger
       />
+
+      {/* Start sending dialog */}
+      <Modal open={!!startTarget} onClose={() => setStartTarget(null)} title="Start sending" maxWidth="max-w-md">
+        {startTarget && (
+          <div className="space-y-3 text-sm text-slate-700">
+            <p>Start sending emails for <strong>{startTarget.position_name}</strong>?</p>
+            <p>The first email will be sent to{' '}
+              <strong>{firstMusician ?? 'the #1 ranked musician'}</strong>.</p>
+            <p>Response deadline: {deadlineText(startTarget)}</p>
+            <p>Auto-send on no response:{' '}
+              {startTarget.auto_resend_enabled
+                ? `Yes${startTarget.auto_resend_days ? `, after ${startTarget.auto_resend_days} day(s)` : ''}`
+                : 'No — you trigger the next send manually'}</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setStartTarget(null)}>Cancel</Button>
+              <Button onClick={confirmStart} loading={busy}>Start Sending</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
