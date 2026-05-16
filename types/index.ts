@@ -10,7 +10,7 @@ export type ManagerStatus = 'active' | 'pending';
 export type PlanType = 'starter' | 'pro';
 export type PlanStatus = 'trialing' | 'active' | 'past_due' | 'cancelled';
 export type SendStatus = 'queued' | 'sent' | 'accepted' | 'declined' | 'no_response' | 'skipped' | 'failed';
-export type EmailProvider = 'gmail' | 'microsoft' | 'smtp';
+export type EmailProvider = 'gmail' | 'outlook' | 'smtp';
 export type NotificationType =
   | 'response_accepted'
   | 'response_declined'
@@ -146,16 +146,21 @@ export interface EmailTemplateWithMeta extends EmailTemplate {
   attachments?: TemplateAttachment[];
 }
 
+export type ConcertStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+export type ConcertPositionStatus = 'pending' | 'active' | 'filled' | 'exhausted' | 'cancelled';
+export type PositionMusicianStatus = 'pending' | 'sent' | 'accepted' | 'declined' | 'no_response' | 'skipped';
+export type ResponseDeadlineType = 'days' | 'specific_date';
+
 export interface Concert {
   id: UUID;
   organization_id: UUID;
-  created_by: UUID; // manager id
+  created_by: UUID | null; // manager id
   name: string;
-  concert_date: Timestamp;
-  rehearsal_dates: Timestamp[] | null;
+  dates: string[];               // YYYY-MM-DD performance dates
+  rehearsal_dates: string[] | null;
   venue: string | null;
   notes: string | null;
-  status: 'draft' | 'sending' | 'completed' | 'cancelled';
+  status: ConcertStatus;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -163,12 +168,15 @@ export interface Concert {
 export interface ConcertPosition {
   id: UUID;
   concert_id: UUID;
-  position_name: string; // e.g. "Principal Violin"
-  instrument: string;
+  position_name: string;
+  musicians_needed: number;
   template_id: UUID | null;
-  no_response_days: number | null; // null = off
-  status: 'pending' | 'sending' | 'filled' | 'exhausted' | 'cancelled';
-  filled_by_musician_id: UUID | null;
+  response_deadline_type: ResponseDeadlineType;
+  response_deadline_days: number | null;
+  response_deadline_date: Timestamp | null;
+  auto_resend_enabled: boolean;
+  auto_resend_days: number | null;
+  status: ConcertPositionStatus;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -178,9 +186,24 @@ export interface ConcertPositionMusician {
   concert_position_id: UUID;
   musician_id: UUID;
   rank: number;
-  status: SendStatus;
+  status: PositionMusicianStatus;
+  sent_at: Timestamp | null;
+  responded_at: Timestamp | null;
+  skip_reason: string | null;
   created_at: Timestamp;
-  updated_at: Timestamp;
+}
+
+// Position musician joined with master-list musician details + computed flags
+export interface PositionMusicianRow extends ConcertPositionMusician {
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_blacklisted: boolean;
+  currently_unavailable?: boolean;
+}
+
+export interface ConcertWithPositions extends Concert {
+  positions?: ConcertPosition[];
 }
 
 export interface SendLog {
