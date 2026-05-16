@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FirstCall
 
-## Getting Started
+A web SaaS that helps orchestra managers automate finding substitute musicians.
+Managers build ranked musician lists, and FirstCall emails them one at a time —
+automatically advancing to the next musician on decline or no-response.
 
-First, run the development server:
+## Tech stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Framework:** Next.js 14 (App Router, TypeScript)
+- **Styling:** Tailwind CSS
+- **Database & Auth:** Supabase (Postgres + RLS)
+- **Payments:** Stripe
+- **System email:** Resend
+- **Outbound email:** Gmail API, Microsoft Graph, Nodemailer (SMTP)
+- **Analytics:** PostHog
+- **Hosting:** Vercel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Local development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repo.
+2. `npm install`
+3. Copy `.env.example` to `.env.local` and fill in values
+   (see [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md)).
+4. Run the SQL migrations in `supabase/migrations/` in order, via the
+   Supabase SQL Editor (001 → 011).
+5. `npm run dev` → http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project structure
 
-## Learn More
+- `app/` — routes (App Router). `app/dashboard/*` is the authenticated app;
+  `app/api/*` is the API; `app/response/[token]` is the public musician page.
+- `lib/` — core logic: `sendEngine.ts` (sequential sending), `usage.ts`
+  (billing/usage), `notifications.ts`, `email.ts` (Gmail/Outlook/SMTP router),
+  `templateEngine.ts`, Supabase clients.
+- `components/` — UI, organized by feature.
+- `supabase/migrations/` — numbered SQL migrations.
+- `hooks/` — client hooks (`useCurrentPlan`, `useSendStatus`, `useCountdown`).
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture notes
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- API routes use the Supabase service-role client; per-organization isolation
+  is enforced in code. RLS policies are defense-in-depth.
+- The send engine never hard-blocks at the plan limit — it charges overage.
+- Two Vercel Cron jobs: hourly no-response check, monthly billing reset.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy to Vercel. Add all environment variables from
+[ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md) to the Vercel project,
+configure the Stripe webhook endpoint, then work through
+[LAUNCH_CHECKLIST.md](./LAUNCH_CHECKLIST.md) before going live.

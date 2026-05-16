@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getCurrentManager } from '@/lib/auth';
 import { daysRemaining } from '@/lib/plans';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
+import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider';
+
+export const metadata: Metadata = { title: 'Dashboard — FirstCall' };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getCurrentManager();
@@ -22,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       paymentFailed={!!(plan as { payment_failed?: boolean }).payment_failed}
       sendLimitReached={sendLimitReached}
     >
+      <AnalyticsProvider userId={ctx.session.user.id} />
       {children}
     </DashboardShell>
   );

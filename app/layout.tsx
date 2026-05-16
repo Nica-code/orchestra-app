@@ -15,8 +15,15 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Orchestra App",
-  description: "Automate substitute musician requests for your orchestra.",
+  title: 'FirstCall — Automate Substitute Musician Outreach',
+  description:
+    'Find substitute musicians faster. FirstCall automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
+  openGraph: {
+    title: 'FirstCall — Automate Substitute Musician Outreach',
+    description:
+      'Find substitute musicians faster. FirstCall automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
