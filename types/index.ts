@@ -230,14 +230,33 @@ export interface SendLog {
 
 export interface Notification {
   id: UUID;
-  organization_id: UUID;
+  organization_id: UUID | null;
   manager_id: UUID;
-  type: NotificationType;
+  type: string;
   title: string;
   message: string;
-  link: string | null;
+  action_url: string | null;
   read: boolean;
+  read_at: Timestamp | null;
+  metadata: Record<string, unknown> | null;
   created_at: Timestamp;
+}
+
+export interface NotificationPreferences {
+  id: UUID;
+  manager_id: UUID;
+  accepted_email: boolean;
+  accepted_inapp: boolean;
+  declined_email: boolean;
+  declined_inapp: boolean;
+  no_response_email: boolean;
+  no_response_inapp: boolean;
+  exhausted_email: boolean;
+  exhausted_inapp: boolean;
+  limit_warning_email: boolean;
+  limit_warning_inapp: boolean;
+  created_at: Timestamp;
+  updated_at: Timestamp;
 }
 
 export type ActivityAction =

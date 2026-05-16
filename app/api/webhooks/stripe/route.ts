@@ -4,7 +4,7 @@ import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase-server';
 import { planTypeFromPriceId } from '@/lib/stripe-prices';
 import { PLAN_CONFIG } from '@/lib/plans';
-import { sendEmail } from '@/lib/resend';
+import { notifyPaymentFailed, notifyTrialEnding } from '@/lib/notifications';
 
 export const runtime = 'nodejs';
 
@@ -12,16 +12,10 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 async function findPlanByCustomer(customerId: string) {
   const admin = createAdminClient();
-  const { data } = await admin.from('plans').select('*, organizations(name), managers!inner(email,role)')
+  const { data } = await admin.from('plans').select('*')
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
   return { admin, plan: data };
-}
-
-async function adminEmailFor(orgId: string): Promise<string | null> {
-  const admin = createAdminClient();
-  const { data } = await admin.from('managers').select('email').eq('organization_id', orgId).eq('role', 'admin').limit(1).maybeSingle();
-  return data?.email ?? null;
 }
 
 export async function POST(req: NextRequest) {
@@ -77,21 +71,22 @@ export async function POST(req: NextRequest) {
           status: 'active',
           send_count: 0,
           billing_period_start: new Date().toISOString(),
+          payment_failed: false,
         }).eq('stripe_customer_id', invoice.customer as string);
         break;
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
-        await admin.from('plans').update({ status: 'past_due' }).eq('stripe_customer_id', customerId);
+        await admin.from('plans').update({ status: 'past_due', payment_failed: true })
+          .eq('stripe_customer_id', customerId);
         const { plan } = await findPlanByCustomer(customerId);
         if (plan) {
-          const email = await adminEmailFor(plan.organization_id);
-          if (email) {
-            await sendEmail({
-              to: email,
-              subject: 'Payment failed — please update your card',
-              html: `<p>We couldn't process your latest payment for Orchestra App. Please update your payment method in the <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings/billing">billing settings</a> to keep your account active.</p>`,
+          const { data: managers } = await admin
+            .from('managers').select('id').eq('organization_id', plan.organization_id).eq('status', 'active');
+          for (const m of managers ?? []) {
+            await notifyPaymentFailed({
+              organizationId: plan.organization_id, managerId: m.id, planType: plan.plan_type ?? 'starter',
             });
           }
         }
@@ -101,13 +96,15 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as Stripe.Subscription;
         const { plan } = await findPlanByCustomer(sub.customer as string);
         if (plan) {
-          const email = await adminEmailFor(plan.organization_id);
-          if (email) {
-            await sendEmail({
-              to: email,
-              subject: 'Your trial ends in 3 days',
-              html: `<p>Your Orchestra App trial ends soon. Add a payment method to keep your account active when the trial ends.</p>
-                     <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings/billing">Manage billing →</a></p>`,
+          const daysRemaining = sub.trial_end
+            ? Math.max(0, Math.ceil((sub.trial_end * 1000 - Date.now()) / 86400000))
+            : 3;
+          const { data: managers } = await admin
+            .from('managers').select('id').eq('organization_id', plan.organization_id).eq('status', 'active');
+          for (const m of managers ?? []) {
+            await notifyTrialEnding({
+              organizationId: plan.organization_id, managerId: m.id,
+              daysRemaining, planType: plan.plan_type ?? 'starter',
             });
           }
         }

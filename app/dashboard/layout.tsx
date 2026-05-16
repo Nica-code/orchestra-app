@@ -11,6 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!organization.onboarding_completed) redirect('/onboarding');
 
   const trialDaysLeft = plan.status === 'trialing' ? daysRemaining(plan.trial_ends_at) : null;
+  const sendLimitReached = (plan.send_count ?? 0) >= (plan.send_limit ?? 0) && (plan.send_limit ?? 0) > 0;
 
   return (
     <DashboardShell
@@ -18,6 +19,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       logoUrl={organization.logo_url}
       managerEmail={manager.email}
       trialDaysLeft={trialDaysLeft}
+      paymentFailed={!!(plan as { payment_failed?: boolean }).payment_failed}
+      sendLimitReached={sendLimitReached}
     >
       {children}
     </DashboardShell>

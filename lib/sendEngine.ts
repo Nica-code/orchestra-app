@@ -13,6 +13,7 @@ import { checkEmailConnection } from './emailHealth';
 import { formatConcertDates } from './concertDates';
 import {
   notifyAccepted, notifyDeclined, notifyNoResponse, notifyExhausted, notifySendFailed,
+  notifySendLimitWarning, notifySendLimitReached,
 } from './notifications';
 import { logActivity } from './activityLogger';
 import type { EmailAttachment } from './mime';
@@ -26,6 +27,32 @@ interface NoResponseResult { ok: boolean; advanced: boolean; }
 
 function log(action: string, details: Record<string, unknown>): void {
   console.log(`[sendEngine] ${new Date().toISOString()} ${action}`, JSON.stringify(details));
+}
+
+/** After a send, checks 80%/100% thresholds and notifies once per billing period. */
+async function checkSendLimits(
+  organizationId: string, managerId: string, sendCount: number,
+  sendLimit: number, planType: string, billingPeriodStart: string | null,
+): Promise<void> {
+  if (sendLimit <= 0) return;
+  const pct = (sendCount / sendLimit) * 100;
+  if (pct < 80) return;
+
+  const action = pct >= 100 ? 'send_limit_reached' : 'send_limit_warning';
+  const admin = createAdminClient();
+  // Deduplicate: only once per billing period
+  let query = admin.from('activity_logs').select('id', { count: 'exact', head: true })
+    .eq('organization_id', organizationId).eq('action', action);
+  if (billingPeriodStart) query = query.gte('created_at', billingPeriodStart);
+  const { count } = await query;
+  if ((count ?? 0) > 0) return;
+
+  if (pct >= 100) {
+    await notifySendLimitReached({ organizationId, managerId, planType });
+  } else {
+    await notifySendLimitWarning({ organizationId, managerId, sendCount, sendLimit, planType });
+  }
+  await logActivity({ organizationId, managerId, action, details: { sendCount, sendLimit } });
 }
 
 /** Fetches position + concert + template + organization in one bundle. */
@@ -187,6 +214,7 @@ export async function sendToNextMusician(
   if (!eligible || !eligible.musicians) {
     await admin.from('concert_positions').update({ status: 'exhausted' }).eq('id', concertPositionId);
     await notifyExhausted({
+      organizationId: ctx.organization.id,
       managerId,
       positionName: ctx.position.position_name,
       concertName: ctx.concert.name,
@@ -275,18 +303,25 @@ export async function sendToNextMusician(
   if (!sendOk) {
     // Do NOT advance on failure — needs manager intervention.
     log('sendFailed', { concertPositionId, musicianId: eligible.musician_id, failureReason });
-    await notifySendFailed({ managerId, musicianName, concertId: ctx.concert.id });
+    await notifySendFailed({
+      organizationId: ctx.organization.id, managerId, musicianName, musicianEmail: musician.email,
+      positionName: ctx.position.position_name, concertName: ctx.concert.name,
+      concertId: ctx.concert.id, failureReason: failureReason ?? 'Unknown error',
+    });
     return { sent: false, reason: `Email failed to send: ${failureReason}` };
   }
 
   await admin.from('concert_position_musicians')
     .update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', eligible.id);
 
-  // increment send_count
-  const { data: plan } = await admin.from('plans').select('id, send_count')
+  // increment send_count + monitor send limits
+  const { data: plan } = await admin.from('plans').select('id, send_count, send_limit, plan_type, billing_period_start')
     .eq('organization_id', ctx.organization.id).maybeSingle();
   if (plan) {
-    await admin.from('plans').update({ send_count: (plan.send_count ?? 0) + 1 }).eq('id', plan.id);
+    const newCount = (plan.send_count ?? 0) + 1;
+    await admin.from('plans').update({ send_count: newCount }).eq('id', plan.id);
+    await checkSendLimits(ctx.organization.id, managerId, newCount, plan.send_limit ?? 0,
+      plan.plan_type ?? 'starter', plan.billing_period_start ?? null);
   }
 
   await logActivity({
@@ -336,6 +371,7 @@ export async function processResponse(
     }
     if (ctx && sendLog.manager_id && musician) {
       await notifyAccepted({
+        organizationId: ctx.organization.id,
         managerId: sendLog.manager_id,
         musicianName,
         musicianEmail: musician.email,
@@ -371,6 +407,7 @@ export async function processResponse(
   }
   if (ctx && sendLog.manager_id) {
     await notifyDeclined({
+      organizationId: ctx.organization.id,
       managerId: sendLog.manager_id,
       musicianName,
       positionName: ctx.position.position_name,
@@ -420,6 +457,7 @@ export async function processNoResponse(sendLogId: string): Promise<NoResponseRe
     nextMusicianName = next.musicianName ?? null;
   }
   await notifyNoResponse({
+    organizationId: ctx.organization.id,
     managerId: sendLog.manager_id,
     musicianName,
     positionName: ctx.position.position_name,

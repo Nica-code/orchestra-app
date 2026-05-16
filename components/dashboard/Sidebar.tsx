@@ -15,6 +15,7 @@ const settingsNav = [
   { href: '/dashboard/settings/organization', label: 'Organization' },
   { href: '/dashboard/settings/managers',     label: 'Managers' },
   { href: '/dashboard/settings/email',        label: 'Email' },
+  { href: '/dashboard/settings/notifications', label: 'Notifications' },
   { href: '/dashboard/settings/billing',      label: 'Billing' },
   { href: '/dashboard/settings/activity',     label: 'Activity' },
 ];

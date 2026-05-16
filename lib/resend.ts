@@ -6,6 +6,7 @@ export async function sendEmail(params: {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   reply_to?: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -18,6 +19,7 @@ export async function sendEmail(params: {
     to: Array.isArray(params.to) ? params.to : [params.to],
     subject: params.subject,
     html: params.html,
+    text: params.text,
     reply_to: params.reply_to,
   };
   const res = await fetch(RESEND_API, {
