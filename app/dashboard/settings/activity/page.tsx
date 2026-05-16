@@ -1,8 +1,11 @@
-export default function Page() {
-  return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-bold text-slate-900">uactivity</h1>
-      <p className="mt-2 text-sm text-slate-600">Coming in a later part.</p>
-    </div>
-  );
+import { requireManager } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase-server';
+import { ActivityClient } from './client';
+
+export default async function ActivityPage() {
+  const { organization } = await requireManager();
+  const admin = createAdminClient();
+  const { data: managers } = await admin
+    .from('managers').select('id, email').eq('organization_id', organization.id);
+  return <ActivityClient managers={managers ?? []} />;
 }

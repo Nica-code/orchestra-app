@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { z } from 'zod';
 import { getCurrentManager } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase-server';
+import { logActivity } from '@/lib/activityLogger';
 
 export const runtime = 'nodejs';
 
@@ -126,5 +127,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (imported > 0) {
+    await logActivity({
+      organizationId: ctx.organization.id, managerId: ctx.manager.id, action: 'musician_imported',
+      entityType: 'musician', details: { count: imported },
+    });
+  }
   return NextResponse.json({ imported, skipped: errors.length, errors });
 }

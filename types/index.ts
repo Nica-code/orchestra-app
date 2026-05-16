@@ -240,6 +240,17 @@ export interface Notification {
   created_at: Timestamp;
 }
 
+export type ActivityAction =
+  | 'concert_created' | 'concert_updated' | 'concert_deleted' | 'concert_status_changed'
+  | 'position_added' | 'position_updated' | 'position_deleted'
+  | 'send_started' | 'send_accepted' | 'send_declined' | 'send_no_response'
+  | 'send_failed' | 'send_skipped' | 'send_next_triggered' | 'position_exhausted' | 'position_filled'
+  | 'musician_added' | 'musician_updated' | 'musician_deleted' | 'musician_imported'
+  | 'musician_blacklisted' | 'musician_unblacklisted'
+  | 'template_created' | 'template_updated' | 'template_deleted'
+  | 'manager_invited' | 'manager_removed' | 'email_connected' | 'email_disconnected'
+  | 'plan_upgraded' | 'plan_downgraded';
+
 export interface ActivityLog {
   id: UUID;
   organization_id: UUID;
@@ -247,8 +258,12 @@ export interface ActivityLog {
   action: string;
   entity_type: string | null;
   entity_id: UUID | null;
-  metadata: Record<string, unknown> | null;
+  details: Record<string, unknown> | null;
   created_at: Timestamp;
+}
+
+export interface ActivityLogWithManager extends ActivityLog {
+  manager_name: string | null;
 }
 
 export interface Usage {

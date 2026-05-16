@@ -14,6 +14,7 @@ import { formatConcertDates } from './concertDates';
 import {
   notifyAccepted, notifyDeclined, notifyNoResponse, notifyExhausted, notifySendFailed,
 } from './notifications';
+import { logActivity } from './activityLogger';
 import type { EmailAttachment } from './mime';
 
 type Admin = ReturnType<typeof createAdminClient>;
@@ -89,6 +90,11 @@ export async function startSending(concertPositionId: string, managerId: string)
 
   await admin.from('concert_positions').update({ status: 'active' }).eq('id', concertPositionId);
   log('startSending', { concertPositionId, managerId });
+  await logActivity({
+    organizationId: ctx.organization.id, managerId, action: 'send_started',
+    entityType: 'concert_position', entityId: concertPositionId,
+    details: { position_name: ctx.position.position_name, concert_name: ctx.concert.name },
+  });
 
   const result = await sendToNextMusician(concertPositionId, managerId, 'manual');
   if (!result.sent) {
@@ -187,6 +193,11 @@ export async function sendToNextMusician(
       concertId: ctx.concert.id,
       totalContacted,
     });
+    await logActivity({
+      organizationId: ctx.organization.id, managerId, action: 'position_exhausted',
+      entityType: 'concert_position', entityId: concertPositionId,
+      details: { position_name: ctx.position.position_name, concert_name: ctx.concert.name, count: totalContacted },
+    });
     log('exhausted', { concertPositionId });
     return { sent: false, reason: 'exhausted' };
   }
@@ -278,6 +289,12 @@ export async function sendToNextMusician(
     await admin.from('plans').update({ send_count: (plan.send_count ?? 0) + 1 }).eq('id', plan.id);
   }
 
+  await logActivity({
+    organizationId: ctx.organization.id, managerId,
+    action: triggeredBy === 'manual' ? 'send_started' : 'send_next_triggered',
+    entityType: 'concert_position', entityId: concertPositionId,
+    details: { position_name: ctx.position.position_name, concert_name: ctx.concert.name, musician_name: musicianName },
+  });
   log('sent', { concertPositionId, musicianId: eligible.musician_id, triggeredBy, token });
   return { sent: true, musicianName, token };
 }
@@ -328,6 +345,18 @@ export async function processResponse(
         concertId: ctx.concert.id,
       });
     }
+    if (ctx) {
+      await logActivity({
+        organizationId: ctx.organization.id, managerId: sendLog.manager_id, action: 'send_accepted',
+        entityType: 'concert_position', entityId: ctx.position.id,
+        details: { musician_name: musicianName, position_name: ctx.position.position_name, concert_name: ctx.concert.name },
+      });
+      await logActivity({
+        organizationId: ctx.organization.id, managerId: sendLog.manager_id, action: 'position_filled',
+        entityType: 'concert_position', entityId: ctx.position.id,
+        details: { musician_name: musicianName, position_name: ctx.position.position_name, concert_name: ctx.concert.name },
+      });
+    }
     log('accepted', { token, musicianId: sendLog.musician_id });
     return { success: true, action: 'accepted' };
   }
@@ -349,6 +378,13 @@ export async function processResponse(
       concertId: ctx.concert.id,
       nextMusicianName,
       autoSentToNext,
+    });
+  }
+  if (ctx) {
+    await logActivity({
+      organizationId: ctx.organization.id, managerId: sendLog.manager_id, action: 'send_declined',
+      entityType: 'concert_position', entityId: ctx.position.id,
+      details: { musician_name: musicianName, position_name: ctx.position.position_name, concert_name: ctx.concert.name },
     });
   }
   log('declined', { token, musicianId: sendLog.musician_id, autoSentToNext });
@@ -391,6 +427,11 @@ export async function processNoResponse(sendLogId: string): Promise<NoResponseRe
     concertId: ctx.concert.id,
     nextMusicianName,
     autoSentToNext,
+  });
+  await logActivity({
+    organizationId: ctx.organization.id, managerId: sendLog.manager_id, action: 'send_no_response',
+    entityType: 'concert_position', entityId: ctx.position.id,
+    details: { musician_name: musicianName, position_name: ctx.position.position_name, concert_name: ctx.concert.name },
   });
   log('noResponse', { sendLogId, autoSentToNext });
   return { ok: true, advanced: autoSentToNext };

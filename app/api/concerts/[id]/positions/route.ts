@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { loadOwnedConcert } from '@/lib/concertAuth';
+import { logActivity } from '@/lib/activityLogger';
 
 const schema = z.object({
   position_name: z.string().min(1).max(120),
@@ -82,5 +83,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
+  await logActivity({
+    organizationId: concert!.organization_id, managerId: null, action: 'position_added',
+    entityType: 'concert_position', entityId: position.id,
+    details: { position_name: position.position_name, concert_name: concert!.name },
+  });
   return NextResponse.json({ position, musician_count: orderedIds.length });
 }

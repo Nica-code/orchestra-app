@@ -91,6 +91,14 @@ export function ConcertsClient() {
         ))}
       </div>
 
+      {tab === 'past' && (
+        <div className="mt-3">
+          <Link href="/dashboard/concerts/history" className="text-sm font-medium text-indigo-600 hover:underline">
+            View full concert history →
+          </Link>
+        </div>
+      )}
+
       {loading ? (
         <p className="mt-10 text-center text-slate-400">Loading…</p>
       ) : visible.length === 0 ? (
