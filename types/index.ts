@@ -71,12 +71,14 @@ export interface Plan {
 export interface Musician {
   id: UUID;
   organization_id: UUID;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string | null;
-  instrument: string | null;
+  position: string;
+  rank: number;
   notes: string | null;
-  blacklisted: boolean;
+  is_blacklisted: boolean;
   created_at: Timestamp;
   updated_at: Timestamp;
 }
@@ -84,10 +86,16 @@ export interface Musician {
 export interface MusicianAvailability {
   id: UUID;
   musician_id: UUID;
-  unavailable_from: Timestamp;
-  unavailable_to: Timestamp;
+  start_date: string; // YYYY-MM-DD
+  end_date: string;   // YYYY-MM-DD
   reason: string | null;
   created_at: Timestamp;
+}
+
+// Musician with computed/joined flags used in list views
+export interface MusicianWithStatus extends Musician {
+  currently_unavailable?: boolean;
+  has_notes?: boolean;
 }
 
 export interface EmailIntegration {
