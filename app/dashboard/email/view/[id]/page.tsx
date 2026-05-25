@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, Mail, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import Link from 'next/link';
 
 interface RecipientRow {
   id: string;
@@ -135,9 +136,17 @@ export default function EmailViewPage() {
             {isBroadcast ? '📡 Broadcast' : '⬇ Cascade'} · {timeStr(project.created_at) ?? ''}
           </p>
         </div>
-        <span className={`mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${projectStatusCls}`}>
-          {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${projectStatusCls}`}>
+            {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+          </span>
+          <Link
+            href={`/dashboard/email/compose?draft=${id}`}
+            className="flex items-center gap-1 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-indigo-300 hover:text-indigo-700"
+          >
+            <Pencil className="h-3 w-3" /> Edit
+          </Link>
+        </div>
       </div>
 
       {/* Email body preview (collapsible) */}

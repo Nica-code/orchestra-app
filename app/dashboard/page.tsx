@@ -89,16 +89,14 @@ export default async function DashboardHome() {
           ) : (
             <ul className="mt-3 space-y-2">
               {(activeEmails ?? []).map((c) => (
-                <li key={c.id}>
-                  <Link
-                    href={`/dashboard/email/view/${c.id}`}
-                    className="flex items-center justify-between rounded-md border border-slate-100 p-3 hover:border-indigo-200 hover:bg-slate-50 transition-colors"
-                  >
-                    <p className="truncate text-sm font-medium text-slate-800">{c.name}</p>
-                    <span className="ml-3 shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                      Active
-                    </span>
-                  </Link>
+                <li key={c.id} className="flex items-center justify-between rounded-md border border-slate-100 p-3">
+                  <p className="truncate text-sm font-medium text-slate-800">{c.name}</p>
+                  <div className="ml-3 flex shrink-0 items-center gap-2">
+                    <Link href={`/dashboard/email/view/${c.id}`} className="text-xs text-slate-400 hover:text-slate-700">View</Link>
+                    <Link href={`/dashboard/email/compose?draft=${c.id}`}>
+                      <Button size="sm" variant="secondary">Edit</Button>
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>
