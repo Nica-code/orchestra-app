@@ -3,18 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, Mail, ChevronDown, ChevronUp } from 'lucide-react';
-
-interface RecipientRow {
-  id: string;
-  musician_id: string;
-  rank: number;
-  status: string;
-  sent_at: string | null;
-  responded_at: string | null;
-  skip_reason: string | null;
-  musicians: { first_name: string; last_name: string; email: string } | null;
-}
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface SendLog {
   id: string;
@@ -25,6 +14,7 @@ interface SendLog {
   email_body: string | null;
   musician_id: string;
   skip_reason: string | null;
+  musicians: { first_name: string; last_name: string; email: string } | null;
 }
 
 interface Project {
@@ -32,13 +22,7 @@ interface Project {
   name: string;
   status: string;
   created_at: string;
-  updated_at: string;
-}
-
-interface Position {
-  id: string;
-  send_mode: string;
-  status: string;
+  positions: { id: string; send_mode: string }[];
 }
 
 const STATUS_CFG: Record<string, { label: string; icon: typeof Circle; cls: string }> = {
@@ -62,35 +46,21 @@ export default function EmailViewPage() {
   const router = useRouter();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [position, setPosition] = useState<Position | null>(null);
-  const [recipients, setRecipients] = useState<RecipientRow[]>([]);
   const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bodyOpen, setBodyOpen] = useState(true);
-  const [expandedLog, setExpandedLog] = useState<string | null>(null);
+  const [bodyOpen, setBodyOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const concertRes = await fetch(`/api/concerts/${id}`);
-      if (!concertRes.ok) throw new Error('Concert not found');
-      const concertData = await concertRes.json();
-
-      const concert = concertData.concert ?? null;
-      setProject(concert);
-      // positions are embedded in the concert GET response
-      const pos: Position | null = concert?.positions?.[0] ?? null;
-      setPosition(pos);
-
-      if (pos) {
-        const [musRes, logRes] = await Promise.all([
-          fetch(`/api/concerts/${id}/positions/${pos.id}/musicians`),
-          fetch(`/api/concerts/${id}/send-logs`),
-        ]);
-        const musData = await musRes.json();
-        const logData = await logRes.json();
-        setRecipients(musData.musicians ?? []);
-        setSendLogs(logData.logs ?? []);
-      }
+      const [concertRes, logRes] = await Promise.all([
+        fetch(`/api/concerts/${id}`),
+        fetch(`/api/concerts/${id}/send-logs`),
+      ]);
+      if (!concertRes.ok) throw new Error('Not found');
+      const { concert } = await concertRes.json();
+      const { logs } = await logRes.json();
+      setProject(concert ?? null);
+      setSendLogs(logs ?? []);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -103,15 +73,20 @@ export default function EmailViewPage() {
   if (loading) return <div className="mx-auto max-w-3xl pt-16 text-center text-slate-400">Loading…</div>;
   if (!project) return <div className="mx-auto max-w-3xl pt-16 text-center text-slate-400">Not found</div>;
 
-  const isBroadcast = position?.send_mode === 'broadcast';
+  const isBroadcast = project.positions?.[0]?.send_mode === 'broadcast';
+  const templateLog = sendLogs.find((l) => l.email_body);
 
-  // The email body to preview — grab from the first send log that has a body
-  const firstLog = sendLogs.find((l) => l.email_body);
+  // One row per musician (most recent log wins)
+  const byMusician = new Map<string, SendLog>();
+  for (const l of sendLogs) {
+    const prev = byMusician.get(l.musician_id);
+    if (!prev || (l.sent_at ?? '') > (prev.sent_at ?? '')) byMusician.set(l.musician_id, l);
+  }
+  const rows = [...byMusician.values()].sort((a, b) =>
+    (a.sent_at ?? '') < (b.sent_at ?? '') ? -1 : 1
+  );
 
-  // Sort recipients by rank
-  const sorted = [...recipients].sort((a, b) => a.rank - b.rank);
-
-  const projectStatusCls =
+  const statusCls =
     project.status === 'active'    ? 'bg-blue-100 text-blue-700' :
     project.status === 'filled'    ? 'bg-green-100 text-green-700' :
     project.status === 'completed' ? 'bg-green-100 text-green-700' :
@@ -132,37 +107,44 @@ export default function EmailViewPage() {
         <div className="flex-1 min-w-0">
           <h1 className="truncate text-xl font-bold text-slate-900">{project.name}</h1>
           <p className="mt-0.5 text-sm text-slate-400">
-            {isBroadcast ? '📡 Broadcast' : '⬇ Cascade'} · {timeStr(project.created_at) ?? ''}
+            {isBroadcast ? '📡 Broadcast' : '⬇ Cascade'} · {timeStr(project.created_at)}
           </p>
         </div>
-        <span className={`mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${projectStatusCls}`}>
+        <span className={`mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusCls}`}>
           {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
         </span>
       </div>
 
-      {/* Email body preview (collapsible) */}
-      {firstLog && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <button
-            onClick={() => setBodyOpen((v) => !v)}
-            className="flex w-full items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 text-left"
-          >
-            <Mail className="h-4 w-4 text-slate-400" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{firstLog.email_subject}</p>
-            </div>
-            {bodyOpen
-              ? <ChevronUp className="h-4 w-4 text-slate-400 shrink-0" />
-              : <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />}
-          </button>
-          {bodyOpen && (
-            <div
-              className="px-4 py-4 text-sm text-slate-800 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: firstLog.email_body ?? '' }}
-            />
-          )}
-        </div>
-      )}
+      {/* Email Content — collapsed by default, click to expand */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <button
+          onClick={() => setBodyOpen((v) => !v)}
+          className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-0.5">Email Content</p>
+            <p className="truncate text-sm font-medium text-slate-800">
+              {templateLog?.email_subject ?? project.name}
+            </p>
+          </div>
+          {bodyOpen
+            ? <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
+            : <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />}
+        </button>
+
+        {bodyOpen && (
+          <div className="border-t border-slate-100">
+            {templateLog?.email_body ? (
+              <div
+                className="px-5 py-4 text-sm text-slate-800 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: templateLog.email_body }}
+              />
+            ) : (
+              <p className="px-5 py-4 text-sm text-slate-400">Email content not available.</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Recipients */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -170,68 +152,43 @@ export default function EmailViewPage() {
           <h2 className="text-sm font-semibold text-slate-700">
             Recipients
             <span className="ml-2 text-xs font-normal text-slate-400">
-              {isBroadcast ? 'All sent simultaneously' : 'Cascade order'}
+              {rows.length} · {isBroadcast ? 'all at once' : 'cascade order'}
             </span>
           </h2>
         </div>
 
         <div className="divide-y divide-slate-100">
-          {sorted.length === 0 && (
-            <p className="px-4 py-4 text-sm text-slate-400">No recipients</p>
+          {rows.length === 0 && (
+            <p className="px-4 py-4 text-sm text-slate-400">No recipients.</p>
           )}
-          {sorted.map((r) => {
-            // Use send log status if available (more accurate than cpm status)
-            const log = sendLogs.find((l) => l.musician_id === r.musician_id);
-            const statusKey = log?.status ?? r.status;
-            const cfg = STATUS_CFG[statusKey] ?? STATUS_CFG.pending;
+          {rows.map((log, idx) => {
+            const m = log.musicians;
+            const cfg = STATUS_CFG[log.status] ?? STATUS_CFG.pending;
             const Icon = cfg.icon;
-            const name = r.musicians
-              ? `${r.musicians.first_name} ${r.musicians.last_name}`
-              : '—';
-            const email = r.musicians?.email ?? '';
-            const when = log?.responded_at
+            const name = m ? `${m.first_name} ${m.last_name}` : '—';
+            const sub = log.responded_at
               ? `responded ${timeStr(log.responded_at)}`
-              : log?.sent_at
+              : log.sent_at
                 ? `sent ${timeStr(log.sent_at)}`
-                : null;
+                : 'pending';
 
             return (
-              <div key={r.id}>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  {!isBroadcast && (
-                    <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-300">
-                      {r.rank}
-                    </span>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900">{name}</p>
-                    <p className="text-xs text-slate-400">
-                      {email}{when ? ` · ${when}` : ''}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1.5">
-                    <Icon className={`h-4 w-4 ${cfg.cls}`} />
-                    <span className={`text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>
-                    {log?.email_body && (
-                      <button
-                        onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
-                        className="ml-1 rounded p-0.5 text-xs text-slate-400 hover:text-indigo-600"
-                        title="View email sent to this person"
-                      >
-                        {expandedLog === log.id
-                          ? <ChevronUp className="h-3.5 w-3.5" />
-                          : <ChevronDown className="h-3.5 w-3.5" />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* Inline email body for this recipient */}
-                {expandedLog === log?.id && log?.email_body && (
-                  <div
-                    className="border-t border-indigo-50 bg-indigo-50 px-4 py-3 text-sm text-slate-700 prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: log.email_body }}
-                  />
+              <div key={log.id} className="flex items-center gap-3 px-4 py-3">
+                {!isBroadcast && (
+                  <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-300">
+                    {idx + 1}
+                  </span>
                 )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{name}</p>
+                  <p className="text-xs text-slate-400">
+                    {m?.email}{sub ? ` · ${sub}` : ''}
+                  </p>
+                </div>
+                <div className="shrink-0 flex items-center gap-1.5">
+                  <Icon className={`h-4 w-4 ${cfg.cls}`} />
+                  <span className={`text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>
+                </div>
               </div>
             );
           })}
