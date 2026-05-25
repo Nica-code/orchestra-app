@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -92,6 +92,16 @@ export function RichTextEditor({
       },
     },
   });
+
+  // Sync external content changes into the editor (e.g. loading a draft)
+  useEffect(() => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    if (content && content !== current) {
+      editor.commands.setContent(content, false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
 
   // Insert {{variable}} at cursor
   const insertVariable = useCallback((key: string) => {
