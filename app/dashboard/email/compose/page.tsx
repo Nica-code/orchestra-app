@@ -470,12 +470,12 @@ export default function ComposePage() {
   useEffect(() => {
     if (!draftId) return;
     setLoadingDraft(true);
-    Promise.all([
-      fetch(`/api/concerts/${draftId}`).then((r) => r.json()),
-      fetch(`/api/concerts/${draftId}/positions`).then((r) => r.json()),
-    ]).then(async ([concertData, posData]) => {
+    fetch(`/api/concerts/${draftId}`)
+    .then((r) => r.json())
+    .then(async (concertData) => {
       const concert = concertData.concert;
-      const pos = posData.positions?.[0];
+      // positions are embedded in the concert GET response
+      const pos = concert?.positions?.[0];
       if (!concert) return;
       setSubject(concert.name ?? '');
       if (concert.filled_message) setFilledMessage(concert.filled_message);
