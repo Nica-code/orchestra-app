@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Circle, SkipForward, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
 
 interface SendLog {
   id: string;
@@ -49,6 +49,7 @@ export default function EmailViewPage() {
   const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [bodyOpen, setBodyOpen] = useState(false);
+  const [stopping, setStopping] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -69,6 +70,22 @@ export default function EmailViewPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  const stopCascade = async () => {
+    if (!confirm('Stop this cascade? Pending response links will be expired and no further emails will be sent.')) return;
+    setStopping(true);
+    try {
+      const res = await fetch(`/api/concerts/${id}/stop`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'Failed to stop'); return; }
+      toast.success('Cascade stopped');
+      setProject((p) => p ? { ...p, status: 'cancelled' } : p);
+    } catch {
+      toast.error('Failed to stop cascade');
+    } finally {
+      setStopping(false);
+    }
+  };
 
   if (loading) return <div className="mx-auto max-w-3xl pt-16 text-center text-slate-400">Loading…</div>;
   if (!project) return <div className="mx-auto max-w-3xl pt-16 text-center text-slate-400">Not found</div>;
@@ -110,9 +127,21 @@ export default function EmailViewPage() {
             {isBroadcast ? '📡 Broadcast' : '⬇ Cascade'} · {timeStr(project.created_at)}
           </p>
         </div>
-        <span className={`mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusCls}`}>
-          {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusCls}`}>
+            {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+          </span>
+          {project.status === 'active' && (
+            <button
+              onClick={stopCascade}
+              disabled={stopping}
+              className="flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
+            >
+              <StopCircle className="h-3.5 w-3.5" />
+              {stopping ? 'Stopping…' : 'Stop'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Email Content — collapsed by default, click to expand */}
