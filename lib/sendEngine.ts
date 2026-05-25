@@ -154,7 +154,9 @@ async function broadcastSend(
   const rows = (queue ?? []) as unknown as Row[];
   if (rows.length === 0) return { sent: false, reason: 'No recipients' };
 
-  const deadlineDays = ctx.position.response_deadline_days ?? 2;
+  const deadlineDays = ctx.position.response_deadline_type === 'none'
+    ? 3650
+    : (ctx.position.response_deadline_days ?? 2);
   const expiresAt = new Date(Date.now() + deadlineDays * 24 * 60 * 60 * 1000);
   const deadlineStr = format(expiresAt, "EEEE, MMMM d, yyyy 'at' h:mm a");
   const attachments = await fetchAttachments(admin, ctx.position.template_id);
@@ -352,6 +354,9 @@ export async function sendToNextMusician(
   let expiresAt: Date;
   if (ctx.position.response_deadline_type === 'specific_date' && ctx.position.response_deadline_date) {
     expiresAt = new Date(ctx.position.response_deadline_date);
+  } else if (ctx.position.response_deadline_type === 'none') {
+    // No deadline — expire 10 years from now
+    expiresAt = new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000);
   } else {
     const days = ctx.position.response_deadline_days ?? 2;
     expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
