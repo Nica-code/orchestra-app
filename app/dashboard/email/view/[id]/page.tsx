@@ -71,16 +71,14 @@ export default function EmailViewPage() {
 
   const load = useCallback(async () => {
     try {
-      const [concertRes, posRes] = await Promise.all([
-        fetch(`/api/concerts/${id}`),
-        fetch(`/api/concerts/${id}/positions`),
-      ]);
+      const concertRes = await fetch(`/api/concerts/${id}`);
       if (!concertRes.ok) throw new Error('Concert not found');
       const concertData = await concertRes.json();
-      const posData = await posRes.json();
 
-      setProject(concertData.concert ?? null);
-      const pos: Position | null = posData.positions?.[0] ?? null;
+      const concert = concertData.concert ?? null;
+      setProject(concert);
+      // positions are embedded in the concert GET response
+      const pos: Position | null = concert?.positions?.[0] ?? null;
       setPosition(pos);
 
       if (pos) {
