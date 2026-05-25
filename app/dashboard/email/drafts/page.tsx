@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { BookMarked, Pencil, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { BookMarked, Trash2 } from 'lucide-react';
 import type { Concert } from '@/types';
 
 function timeAgo(iso: string) {
@@ -50,16 +49,9 @@ export default function DraftsPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Drafts</h1>
-          <p className="mt-0.5 text-sm text-slate-500">Saved drafts — click to continue editing</p>
-        </div>
-        <Link href="/dashboard/email/compose">
-          <Button>
-            <Pencil className="h-4 w-4" /> New Email
-          </Button>
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Drafts</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Saved drafts — click to continue editing</p>
       </div>
 
       {loading ? (
@@ -71,9 +63,6 @@ export default function DraftsPage() {
           <p className="mt-1 text-sm text-slate-400">
             While composing, click &ldquo;Save Draft&rdquo; to save your work here.
           </p>
-          <Link href="/dashboard/email/compose" className="mt-4 inline-block">
-            <Button>New Email</Button>
-          </Link>
         </div>
       ) : (
         <div className="mt-6 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">

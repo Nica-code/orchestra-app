@@ -111,7 +111,7 @@ function EmailList({ projects }: { projects: ProjectRow[] }) {
         return (
           <Link
             key={p.id}
-            href={`/dashboard/email/compose?draft=${p.id}`}
+            href={p.status === 'draft' ? `/dashboard/email/compose?draft=${p.id}` : `/dashboard/email/view/${p.id}`}
             className="flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 transition-colors"
           >
             <Icon className={`h-4 w-4 shrink-0 ${cfg.cls}`} />

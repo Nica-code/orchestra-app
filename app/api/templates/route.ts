@@ -20,12 +20,13 @@ export async function GET() {
     .from('email_templates')
     .select('*')
     .eq('organization_id', ctx.organization.id)
-    .eq('is_one_off', false)
     .order('is_default', { ascending: false })
     .order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const ids = (templates ?? []).map((t) => t.id);
+  // Hide auto-generated one-off templates (is_one_off may not exist yet before migration 016)
+  const visible = (templates ?? []).filter((t) => !(t as { is_one_off?: boolean }).is_one_off);
+  const ids = visible.map((t) => t.id);
   const counts = new Map<string, number>();
   if (ids.length > 0) {
     const { data: atts } = await admin
@@ -36,7 +37,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    templates: (templates ?? []).map((t) => ({ ...t, attachment_count: counts.get(t.id) ?? 0 })),
+    templates: visible.map((t) => ({ ...t, attachment_count: counts.get(t.id) ?? 0 })),
   });
 }
 
