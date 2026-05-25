@@ -6,7 +6,11 @@ import { toast } from 'sonner';
 import { X, ChevronDown, ArrowUp, ArrowDown, Clock, UserPlus, ChevronsUpDown, GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AddEditMusician } from '@/components/musicians/AddEditMusician';
+import { RichTextEditor } from '@/components/editor/RichTextEditor';
+import { TEMPLATE_VARIABLES } from '@/lib/templateEngine';
 import type { Musician, EmailTemplate, RecipientGroupWithCount, RecipientGroupMember } from '@/types';
+
+const EDITOR_VARIABLES = TEMPLATE_VARIABLES.map((v) => ({ label: v.description, key: v.key }));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -726,14 +730,16 @@ export default function ComposePage() {
           </div>
         )}
 
-        {/* BODY */}
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder={`Write your email here…\n\nTip: use {{name}} to personalize for each recipient.`}
-          rows={14}
-          className="block w-full resize-none border-0 px-4 py-4 text-sm text-slate-800 outline-none placeholder:text-slate-300 focus:ring-0"
-        />
+        {/* BODY — rich text editor */}
+        <div className="border-0">
+          <RichTextEditor
+            content={body}
+            onChange={setBody}
+            placeholder="Write your email here… Use the { } button to insert variables like {{name}}."
+            variables={EDITOR_VARIABLES}
+            minHeight={300}
+          />
+        </div>
 
         {/* Footer / Send bar */}
         <div className="flex items-center gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3">

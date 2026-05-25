@@ -15,8 +15,16 @@ interface Props {
   onEdit?: () => void;
 }
 
-// Highlights {{variables}} with a yellow background.
-function highlightVariables(text: string) {
+// Highlights {{variables}} in raw HTML string, returns safe HTML.
+function highlightVariablesInHtml(html: string): string {
+  return html.replace(
+    /\{\{\s*([a-zA-Z_]+)\s*\}\}/g,
+    '<mark style="background:#fef08a;border-radius:3px;padding:0 2px">{{$1}}</mark>',
+  );
+}
+
+// Strip HTML for subject (subject is plain text)
+function highlightVariablesPlain(text: string) {
   const parts = text.split(/(\{\{\s*[a-zA-Z_]+\s*\}\})/g);
   return parts.map((part, i) =>
     /^\{\{\s*[a-zA-Z_]+\s*\}\}$/.test(part)
@@ -49,9 +57,12 @@ export function TemplatePreviewModal({ open, onClose, template, attachments = []
             <div className="space-y-1 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <p><span className="text-slate-400">From:</span> {fromEmail || 'your-connected-email@example.com'}</p>
               <p><span className="text-slate-400">To:</span> Sarah Johnson</p>
-              <p><span className="text-slate-400">Subject:</span> <strong>{rendered.subject}</strong></p>
+              <p><span className="text-slate-400">Subject:</span> <strong>{rendered.subject.replace(/<[^>]+>/g, '')}</strong></p>
             </div>
-            <div className="whitespace-pre-wrap px-4 py-4 text-sm text-slate-800">{rendered.body}</div>
+            <div
+              className="px-4 py-4 text-sm text-slate-800 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: rendered.body }}
+            />
             {attachments.length > 0 && (
               <div className="border-t border-slate-200 px-4 py-3">
                 {attachments.map((a, i) => (
@@ -67,9 +78,12 @@ export function TemplatePreviewModal({ open, onClose, template, attachments = []
       ) : (
         <div className="mt-4">
           <p className="text-xs font-medium uppercase text-slate-400">Subject</p>
-          <p className="mt-1 text-sm">{highlightVariables(template.subject)}</p>
+          <p className="mt-1 text-sm">{highlightVariablesPlain(template.subject)}</p>
           <p className="mt-4 text-xs font-medium uppercase text-slate-400">Body</p>
-          <div className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{highlightVariables(template.body)}</div>
+          <div
+            className="mt-1 text-sm text-slate-800 prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: highlightVariablesInHtml(template.body) }}
+          />
         </div>
       )}
 
