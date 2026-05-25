@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Mail, Users, Settings, X, ListOrdered, Clock, FileText, Pencil } from 'lucide-react';
+import { Home, Mail, Users, Settings, X, ListOrdered, Clock, FileText, Pencil, BookMarked } from 'lucide-react';
 
 const emailSubNav = [
   { href: '/dashboard/email/compose', label: 'Compose New Message', icon: Pencil },
+  { href: '/dashboard/email/drafts',  label: 'Drafts', icon: BookMarked },
   { href: '/dashboard/email/sent',    label: 'Sent', icon: Clock },
   { href: '/dashboard/templates',     label: 'Templates', icon: FileText },
 ];
