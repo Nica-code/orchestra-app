@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       created_by:      managerId,
       name:            body.subject,
       template_id:     templateId,
-      accept_deadline_hours: body.accept_deadline_hours ?? null,
+      ...(body.accept_deadline_hours != null ? { accept_deadline_hours: body.accept_deadline_hours } : {}),
       custom_variables: body.custom_variables ?? {},
       filled_message:  body.filled_message ?? null,
       status:          body.save_as_draft ? 'draft' : 'active',
