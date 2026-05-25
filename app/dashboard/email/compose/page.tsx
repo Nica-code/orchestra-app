@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { X, ChevronDown, ArrowUp, ArrowDown, Clock, UserPlus, ChevronsUpDown, GitMerge } from 'lucide-react';
+import { X, ChevronDown, ArrowUp, ArrowDown, Clock, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { AddEditMusician } from '@/components/musicians/AddEditMusician';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
@@ -439,29 +439,76 @@ function SequenceList({
 
 export default function ComposePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const draftId = searchParams.get('draft'); // existing draft project id
 
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [templateId, setTemplateId] = useState('');
-  const [deadlineHours, setDeadlineHours] = useState(48);
-  const [showDeadline, setShowDeadline] = useState(false);
+  // null = no deadline
+  const [deadlineHours, setDeadlineHours] = useState<number | null>(48);
+  const [hasDeadline, setHasDeadline] = useState(true);
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [groups, setGroups] = useState<RecipientGroupWithCount[]>([]);
-  const [sendMode, setSendMode] = useState<'cascade' | 'broadcast'>('cascade');
+  const [broadcast, setBroadcast] = useState(false);
   const [filledMessage, setFilledMessage] = useState(
-    `Thank you for considering this opportunity. Someone else has accepted the position, so we're all set for now. We truly appreciate your time and will keep you in mind for future opportunities.`
+    `Thank you for considering this opportunity. Someone else has accepted, so we're all set for now. We appreciate your time and will keep you in mind for future opportunities.`
   );
-  const [showFilledMsg, setShowFilledMsg] = useState(false);
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
 
   // Load templates + groups
   useEffect(() => {
     fetch('/api/templates').then((r) => r.json()).then((d) => setTemplates(d.templates ?? []));
     fetch('/api/groups').then((r) => r.json()).then((d) => setGroups(d.groups ?? []));
   }, []);
+
+  // Load existing draft if ?draft=<id>
+  useEffect(() => {
+    if (!draftId) return;
+    setLoadingDraft(true);
+    Promise.all([
+      fetch(`/api/concerts/${draftId}`).then((r) => r.json()),
+      fetch(`/api/concerts/${draftId}/positions`).then((r) => r.json()),
+    ]).then(async ([concertData, posData]) => {
+      const concert = concertData.concert;
+      const pos = posData.positions?.[0];
+      if (!concert) return;
+      setSubject(concert.name ?? '');
+      if (concert.filled_message) setFilledMessage(concert.filled_message);
+      if (pos?.send_mode === 'broadcast') setBroadcast(true);
+      if (concert.accept_deadline_hours) {
+        setDeadlineHours(concert.accept_deadline_hours);
+        setHasDeadline(true);
+      } else {
+        setHasDeadline(false);
+      }
+      // Load template body
+      if (pos?.template_id) {
+        const td = await fetch(`/api/templates/${pos.template_id}`).then((r) => r.json());
+        if (td.template) {
+          setBody(td.template.body ?? '');
+          setTemplateId(pos.template_id);
+        }
+      }
+      // Load recipients
+      if (pos?.id) {
+        const md = await fetch(`/api/concerts/${draftId}/positions/${pos.id}/musicians`).then((r) => r.json());
+        const list = md.musicians ?? [];
+        setRecipients(list.map((m: { musician_id?: string; first_name: string; last_name: string; email: string; rank: number }) => ({
+          key: `${m.email}-draft`,
+          musician_id: m.musician_id ?? null,
+          name: `${m.first_name} ${m.last_name}`.trim(),
+          email: m.email,
+          rank: m.rank,
+        })));
+      }
+    }).catch(() => toast.error('Failed to load draft'))
+      .finally(() => setLoadingDraft(false));
+  }, [draftId]);
 
   // When template selected, pre-fill subject + body
   const applyTemplate = (id: string) => {
@@ -511,11 +558,10 @@ export default function ComposePage() {
     toast.success(`Loaded ${newOnes.length} contacts from group`);
   };
 
-  // Send or save
   const submit = async (saveAsDraft: boolean) => {
     if (recipients.length === 0) { toast.error('Add at least one recipient'); return; }
     if (!subject.trim()) { toast.error('Subject is required'); return; }
-    if (!body.trim()) { toast.error('Email body is required'); return; }
+    if (!body.trim() || body === '<p></p>') { toast.error('Email body is required'); return; }
 
     if (saveAsDraft) setSavingDraft(true);
     else setSending(true);
@@ -529,10 +575,11 @@ export default function ComposePage() {
           body,
           recipients: recipients.map((r) => ({ musician_id: r.musician_id, name: r.name, email: r.email, rank: r.rank })),
           template_id: templateId || null,
-          accept_deadline_hours: deadlineHours,
-          send_mode: sendMode,
-          filled_message: sendMode === 'broadcast' ? filledMessage : undefined,
+          accept_deadline_hours: hasDeadline ? (deadlineHours ?? 48) : null,
+          send_mode: broadcast ? 'broadcast' : 'cascade',
+          filled_message: broadcast ? filledMessage : undefined,
           save_as_draft: saveAsDraft,
+          draft_project_id: draftId || null,
         }),
       });
       const data = await res.json();
@@ -540,15 +587,15 @@ export default function ComposePage() {
 
       if (saveAsDraft) {
         toast.success('Draft saved');
-        router.push('/dashboard/email');
       } else {
         if (data.sent) {
-          toast.success(`Cascade started — first email sent to ${data.recipient_name}`);
+          const mode = broadcast ? 'Broadcast sent' : 'Cascade started';
+          toast.success(`${mode} — ${data.recipient_name ? `first email sent to ${data.recipient_name}` : 'sending in progress'}`);
         } else {
-          toast.warning(data.reason === 'exhausted' ? 'No eligible recipients found' : 'Cascade started');
+          toast.warning(data.reason === 'exhausted' ? 'No eligible recipients found' : 'Sending started');
         }
-        router.push(`/dashboard/concerts/${data.project_id}`);
       }
+      router.push('/dashboard/email');
     } finally {
       setSending(false);
       setSavingDraft(false);
@@ -604,8 +651,8 @@ export default function ComposePage() {
           />
         </div>
 
-        {/* Template selector (subtle toolbar) */}
-        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2">
+        {/* Template selector + options toolbar */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-2">
           <select
             value={templateId}
             onChange={(e) => applyTemplate(e.target.value)}
@@ -618,89 +665,36 @@ export default function ComposePage() {
           </select>
           <span className="text-xs text-slate-400">or write below ↓</span>
 
-          {/* Deadline toggle */}
-          <button
-            type="button"
-            onClick={() => setShowDeadline((s) => !s)}
-            className={`ml-auto flex items-center gap-1 rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
-              showDeadline ? 'bg-indigo-100 text-indigo-700' : 'text-slate-500 hover:bg-slate-200'
-            }`}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            {deadlineHours}h deadline
-          </button>
-        </div>
-
-        {/* Send mode toggle */}
-        <div className="flex items-stretch border-b border-slate-100">
-          <button
-            type="button"
-            onClick={() => setSendMode('cascade')}
-            className={`flex-1 px-4 py-2.5 text-left text-sm transition-colors ${
-              sendMode === 'cascade'
-                ? 'bg-indigo-50 font-medium text-indigo-700'
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <span className="font-semibold">⬇ Cascade</span>
-            <span className="ml-2 text-xs opacity-70">Send one at a time, next gets it if previous declines</span>
-          </button>
-          <div className="w-px bg-slate-100" />
-          <button
-            type="button"
-            onClick={() => { setSendMode('broadcast'); setShowFilledMsg(true); }}
-            className={`flex-1 px-4 py-2.5 text-left text-sm transition-colors ${
-              sendMode === 'broadcast'
-                ? 'bg-amber-50 font-medium text-amber-700'
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <span className="font-semibold">📡 Broadcast</span>
-            <span className="ml-2 text-xs opacity-70">Send to everyone at once — first to accept wins</span>
-          </button>
-        </div>
-
-        {/* Broadcast: editable "position filled" message */}
-        {sendMode === 'broadcast' && showFilledMsg && (
-          <div className="border-b border-amber-100 bg-amber-50 px-4 py-3">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs font-semibold text-amber-800">
-                Message sent to others once someone accepts
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowFilledMsg(false)}
-                className="text-amber-400 hover:text-amber-700 text-xs"
-              >
-                hide
-              </button>
-            </div>
-            <textarea
-              value={filledMessage}
-              onChange={(e) => setFilledMessage(e.target.value)}
-              rows={3}
-              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 resize-none"
+          {/* Deadline checkbox */}
+          <label className="ml-auto flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={hasDeadline}
+              onChange={(e) => {
+                setHasDeadline(e.target.checked);
+                if (e.target.checked && !deadlineHours) setDeadlineHours(48);
+              }}
+              className="h-3.5 w-3.5 rounded accent-indigo-600"
             />
-            <p className="mt-1 text-xs text-amber-600">
-              Their response links will be blocked and this message will appear when they open it.
-            </p>
-          </div>
-        )}
-        {sendMode === 'broadcast' && !showFilledMsg && (
-          <div className="border-b border-slate-100 bg-amber-50 px-4 py-2">
-            <button
-              type="button"
-              onClick={() => setShowFilledMsg(true)}
-              className="text-xs text-amber-600 hover:text-amber-800"
-            >
-              ✎ Edit "position filled" message
-            </button>
-          </div>
-        )}
+            <Clock className="h-3.5 w-3.5 text-slate-400" />
+            <span className="text-xs font-medium text-slate-600">Response deadline</span>
+          </label>
 
-        {/* Deadline picker (expandable) */}
-        {showDeadline && (
-          <div className="flex items-center gap-2 border-b border-slate-100 bg-indigo-50 px-4 py-2.5">
+          {/* Broadcast checkbox */}
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={broadcast}
+              onChange={(e) => setBroadcast(e.target.checked)}
+              className="h-3.5 w-3.5 rounded accent-amber-500"
+            />
+            <span className="text-xs font-medium text-slate-600">📡 Broadcast</span>
+          </label>
+        </div>
+
+        {/* Deadline picker (shown when checkbox checked) */}
+        {hasDeadline && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 bg-indigo-50 px-4 py-2.5">
             <span className="text-xs font-medium text-indigo-700">Response window:</span>
             {[24, 48, 72, 168].map((h) => (
               <button
@@ -710,7 +704,7 @@ export default function ComposePage() {
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   deadlineHours === h
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-slate-600 hover:border-indigo-300 border border-slate-200'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300'
                 }`}
               >
                 {h === 168 ? '1 week' : `${h}h`}
@@ -721,12 +715,31 @@ export default function ComposePage() {
                 type="number"
                 min={1}
                 max={8760}
-                value={deadlineHours}
+                value={deadlineHours ?? 48}
                 onChange={(e) => setDeadlineHours(Number(e.target.value))}
                 className="w-16 rounded border border-slate-200 px-2 py-1 text-xs"
               />
               <span className="text-xs text-slate-500">hours</span>
             </div>
+          </div>
+        )}
+
+        {/* Broadcast: editable "position filled" message */}
+        {broadcast && (
+          <div className="border-b border-amber-100 bg-amber-50 px-4 py-3">
+            <p className="mb-1.5 text-xs font-semibold text-amber-800">
+              📡 Broadcast mode — everyone receives the email at once. First to accept wins.
+            </p>
+            <p className="mb-2 text-xs text-amber-700">Message shown to others once someone accepts:</p>
+            <textarea
+              value={filledMessage}
+              onChange={(e) => setFilledMessage(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 resize-none"
+            />
+            <p className="mt-1 text-xs text-amber-600">
+              Their response links will be blocked and this message will appear when they open it.
+            </p>
           </div>
         )}
 
@@ -748,7 +761,7 @@ export default function ComposePage() {
             loading={sending}
             disabled={savingDraft}
           >
-            ▶ Start Cascade
+            {broadcast ? '📡 Send Broadcast' : '▶ Start Cascade'}
           </Button>
           <Button
             variant="secondary"
@@ -760,7 +773,7 @@ export default function ComposePage() {
           </Button>
           <div className="ml-auto text-xs text-slate-400">
             {recipients.length > 0
-              ? `${recipients.length} recipient${recipients.length === 1 ? '' : 's'} · ${deadlineHours}h response window`
+              ? `${recipients.length} recipient${recipients.length === 1 ? '' : 's'}${hasDeadline && deadlineHours ? ` · ${deadlineHours}h window` : ' · no deadline'}`
               : 'Add recipients to send'}
           </div>
         </div>
