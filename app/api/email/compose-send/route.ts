@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
         subject: body.subject,
         body: body.body,
         is_default: false,
+        is_one_off: true,   // hidden from Templates list
       })
       .select('id')
       .single();

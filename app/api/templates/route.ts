@@ -20,6 +20,7 @@ export async function GET() {
     .from('email_templates')
     .select('*')
     .eq('organization_id', ctx.organization.id)
+    .eq('is_one_off', false)
     .order('is_default', { ascending: false })
     .order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
