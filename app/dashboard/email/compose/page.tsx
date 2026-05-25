@@ -590,9 +590,13 @@ export default function ComposePage() {
       } else {
         if (data.sent) {
           const mode = broadcast ? 'Broadcast sent' : 'Cascade started';
-          toast.success(`${mode} — ${data.recipient_name ? `first email sent to ${data.recipient_name}` : 'sending in progress'}`);
+          toast.success(`${mode}${data.recipient_name ? ` — sent to ${data.recipient_name}` : ''}`);
+        } else if (data.reason === 'exhausted') {
+          toast.warning('No eligible contacts found');
         } else {
-          toast.warning(data.reason === 'exhausted' ? 'No eligible contacts found' : 'Sending started');
+          // Show the actual failure reason so user can diagnose
+          toast.error(`Send failed: ${data.reason ?? 'Unknown error'}`);
+          return; // don't redirect so user can fix and retry
         }
       }
       router.push('/dashboard/email');
