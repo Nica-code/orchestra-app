@@ -41,7 +41,7 @@ function NewGroupModal({ open, onClose, onCreated }: {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="New Recipient Group" maxWidth="max-w-md">
+    <Modal open={open} onClose={onClose} title="New Contact Group" maxWidth="max-w-md">
       <div className="space-y-3">
         <Input
           label="Group Name"
@@ -99,7 +99,7 @@ export default function GroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Recipient Groups</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Contact Groups</h1>
           <p className="mt-0.5 text-sm text-slate-500">
             Saved, ordered contact sequences — reuse them across any project
           </p>

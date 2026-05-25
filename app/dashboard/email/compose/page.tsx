@@ -337,7 +337,7 @@ function SequenceList({
   return (
     <div className="border-t border-slate-100 px-4 py-3">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        Cascade sequence — people in the same tier are treated as equal priority
+        Cascade sequence — contacts in the same tier are treated as equal priority
       </p>
       <div className="space-y-2">
         {tiers.map(({ rank, tierIdx, members }, tIdx) => {
@@ -559,7 +559,7 @@ export default function ComposePage() {
   };
 
   const submit = async (saveAsDraft: boolean) => {
-    if (recipients.length === 0) { toast.error('Add at least one recipient'); return; }
+    if (recipients.length === 0) { toast.error('Add at least one contact'); return; }
     if (!subject.trim()) { toast.error('Subject is required'); return; }
     if (!body.trim() || body === '<p></p>') { toast.error('Email body is required'); return; }
 
@@ -592,7 +592,7 @@ export default function ComposePage() {
           const mode = broadcast ? 'Broadcast sent' : 'Cascade started';
           toast.success(`${mode} — ${data.recipient_name ? `first email sent to ${data.recipient_name}` : 'sending in progress'}`);
         } else {
-          toast.warning(data.reason === 'exhausted' ? 'No eligible recipients found' : 'Sending started');
+          toast.warning(data.reason === 'exhausted' ? 'No eligible contacts found' : 'Sending started');
         }
       }
       router.push('/dashboard/email');

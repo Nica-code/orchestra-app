@@ -150,7 +150,7 @@ export default function EmailViewPage() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-700">
-            Recipients
+            Contacts
             <span className="ml-2 text-xs font-normal text-slate-400">
               {rows.length} · {isBroadcast ? 'all at once' : 'cascade order'}
             </span>
@@ -159,7 +159,7 @@ export default function EmailViewPage() {
 
         <div className="divide-y divide-slate-100">
           {rows.length === 0 && (
-            <p className="px-4 py-4 text-sm text-slate-400">No recipients.</p>
+            <p className="px-4 py-4 text-sm text-slate-400">No contacts.</p>
           )}
           {rows.map((log, idx) => {
             const m = log.musicians;
