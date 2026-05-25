@@ -174,7 +174,7 @@ export function SendLogClient(props: Props) {
               );
             })}
             {props.rows.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400">No musicians on this list.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-10 text-center text-slate-400">No contacts on this list.</td></tr>
             )}
           </tbody>
         </table>
@@ -182,7 +182,7 @@ export function SendLogClient(props: Props) {
 
       {props.positionStatus === 'active' && !props.autoResend && (
         <div className="mt-4">
-          <Button onClick={sendNext} loading={busy}>Send to Next Musician</Button>
+          <Button onClick={sendNext} loading={busy}>Send to Next Contact</Button>
         </div>
       )}
 

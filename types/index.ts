@@ -79,8 +79,22 @@ export interface Musician {
   rank: number;
   notes: string | null;
   is_blacklisted: boolean;
+  custom_fields: Record<string, string | number | boolean | null>;
   created_at: Timestamp;
   updated_at: Timestamp;
+}
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'boolean' | 'select';
+
+export interface CustomFieldDefinition {
+  id: UUID;
+  organization_id: UUID;
+  label: string;
+  field_type: CustomFieldType;
+  options: string[] | null;
+  is_required: boolean;
+  display_order: number;
+  created_at: Timestamp;
 }
 
 export interface MusicianAvailability {
@@ -146,7 +160,10 @@ export interface EmailTemplateWithMeta extends EmailTemplate {
   attachments?: TemplateAttachment[];
 }
 
-export type ConcertStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+// Project (formerly "Concert") — generic cascade outreach workspace
+export type ProjectStatus = 'draft' | 'active' | 'filled' | 'completed' | 'cancelled';
+/** @deprecated use ProjectStatus */
+export type ConcertStatus = ProjectStatus;
 export type ConcertPositionStatus = 'pending' | 'active' | 'filled' | 'exhausted' | 'cancelled';
 export type PositionMusicianStatus = 'pending' | 'sent' | 'accepted' | 'declined' | 'no_response' | 'skipped';
 export type ResponseDeadlineType = 'days' | 'specific_date';
@@ -154,15 +171,45 @@ export type ResponseDeadlineType = 'days' | 'specific_date';
 export interface Concert {
   id: UUID;
   organization_id: UUID;
-  created_by: UUID | null; // manager id
+  created_by: UUID | null;
   name: string;
-  dates: string[];               // YYYY-MM-DD performance dates
+  // Legacy concert fields — nullable, no longer shown in UI
+  dates: string[] | null;
   rehearsal_dates: string[] | null;
   venue: string | null;
+  // Project fields
   notes: string | null;
-  status: ConcertStatus;
+  template_id: UUID | null;          // default template for this project
+  accept_deadline_hours: number;     // hours before auto-advancing
+  accept_deadline_text: string | null; // human-readable deadline sentence
+  custom_variables: Record<string, string>; // user-defined {{variables}}
+  status: ProjectStatus;
   created_at: Timestamp;
   updated_at: Timestamp;
+}
+
+// Recipient Groups — reusable ordered contact sequences
+export interface RecipientGroup {
+  id: UUID;
+  organization_id: UUID;
+  name: string;
+  description: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+}
+
+export interface RecipientGroupMember {
+  id: UUID;
+  group_id: UUID;
+  musician_id: UUID | null; // null = ad-hoc contact not in main contacts list
+  name: string;
+  email: string;
+  rank: number;
+  created_at: Timestamp;
+}
+
+export interface RecipientGroupWithCount extends RecipientGroup {
+  member_count: number;
 }
 
 export interface ConcertPosition {

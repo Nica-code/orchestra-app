@@ -24,8 +24,8 @@ export async function POST() {
     const result = await sendEmail({
       managerId: ctx.manager.id,
       to: integration.email_address,
-      subject: '✓ FirstCall — Your email is connected',
-      body: `<p>This is a test email confirming your email account is successfully connected to FirstCall.</p>
+      subject: '✓ Callscade — Your email is connected',
+      body: `<p>This is a test email confirming your email account is successfully connected to Callscade.</p>
              <p>You're ready to start sending to musicians.</p>`,
     });
     return NextResponse.json({

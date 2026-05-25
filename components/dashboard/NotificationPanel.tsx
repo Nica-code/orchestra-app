@@ -92,7 +92,7 @@ export function NotificationPanel({ onClose, onChanged }: { onClose: () => void;
           <div className="px-4 py-12 text-center">
             <Bell className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-2 text-sm font-medium text-slate-600">No notifications yet</p>
-            <p className="text-xs text-slate-400">You&apos;ll be notified here when musicians respond</p>
+            <p className="text-xs text-slate-400">You&apos;ll be notified here when contacts respond</p>
           </div>
         ) : (
           items.map((n) => {

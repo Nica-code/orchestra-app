@@ -19,7 +19,7 @@ export async function GET() {
     const invoices = list.data.map((inv) => ({
       id: inv.id,
       date: inv.created ? new Date(inv.created * 1000).toISOString() : null,
-      description: inv.lines.data[0]?.description ?? 'FirstCall subscription',
+      description: inv.lines.data[0]?.description ?? 'Callscade subscription',
       amount: (inv.amount_paid || inv.amount_due) / 100,
       status: inv.status,
       pdf: inv.invoice_pdf,

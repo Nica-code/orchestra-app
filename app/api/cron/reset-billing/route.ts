@@ -43,9 +43,9 @@ export async function GET(req: NextRequest) {
       for (const a of admins ?? []) {
         try {
           await sendEmail({
-            from: process.env.NOTIFY_FROM_EMAIL || 'FirstCall <onboarding@resend.dev>',
+            from: process.env.NOTIFY_FROM_EMAIL || 'Callscade <onboarding@resend.dev>',
             to: a.email,
-            subject: `FirstCall — Your ${month} usage summary`,
+            subject: `Callscade — Your ${month} usage summary`,
             html: `<p>Here's your usage summary for ${month}:</p>
               <p>Sends used: ${plan.send_count ?? 0} of ${plan.send_limit ?? 0}</p>
               ${overageLine}

@@ -4,13 +4,13 @@ import { getCurrentManager } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase-server';
 import { logActivity } from '@/lib/activityLogger';
 
-const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 const createSchema = z.object({
   name: z.string().min(1).max(200),
-  dates: z.array(z.string().regex(dateRe)).min(1, 'At least one performance date is required'),
-  rehearsal_dates: z.array(z.string().regex(dateRe)).optional(),
-  venue: z.string().max(200).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  template_id: z.string().uuid().nullable().optional(),
+  accept_deadline_hours: z.number().int().min(1).max(8760).optional(),
+  accept_deadline_text: z.string().max(500).nullable().optional(),
+  custom_variables: z.record(z.string(), z.string()).optional(),
 });
 
 // GET /api/concerts?status=&include_positions=&page=&limit=
@@ -70,10 +70,11 @@ export async function POST(req: NextRequest) {
       organization_id: ctx.organization.id,
       created_by: ctx.manager.id,
       name: body.name,
-      dates: body.dates,
-      rehearsal_dates: body.rehearsal_dates ?? null,
-      venue: body.venue ?? null,
       notes: body.notes ?? null,
+      template_id: body.template_id ?? null,
+      accept_deadline_hours: body.accept_deadline_hours ?? 48,
+      accept_deadline_text: body.accept_deadline_text ?? null,
+      custom_variables: body.custom_variables ?? {},
       status: 'draft',
     })
     .select()

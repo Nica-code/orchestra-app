@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="firstcall-activity-${date}.csv"`,
+      'Content-Disposition': `attachment; filename="callscade-activity-${date}.csv"`,
     },
   });
 }

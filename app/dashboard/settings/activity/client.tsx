@@ -22,8 +22,8 @@ const DATE_RANGES = [
 const CATEGORIES = [
   { value: '', label: 'All Actions' },
   { value: 'send', label: 'Send Activity' },
-  { value: 'concert', label: 'Concert Management' },
-  { value: 'musician', label: 'Musician Management' },
+  { value: 'concert', label: 'Project Management' },
+  { value: 'musician', label: 'Contact Management' },
   { value: 'account', label: 'Account & Settings' },
 ];
 

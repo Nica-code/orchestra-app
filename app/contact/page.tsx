@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Contact — FirstCall' };
+export const metadata = { title: 'Contact — Callscade' };
 
 export default function ContactPage() {
   return (
@@ -9,8 +9,8 @@ export default function ContactPage() {
       <h1 className="mt-4 text-2xl font-bold text-slate-900">Contact us</h1>
       <p className="mt-3 text-slate-600">
         Questions or feedback? Email us at{' '}
-        <a href="mailto:support@firstcall.app" className="font-medium text-indigo-600 hover:underline">
-          support@firstcall.app
+        <a href="mailto:support@callscade.app" className="font-medium text-indigo-600 hover:underline">
+          support@callscade.app
         </a>{' '}
         and we&apos;ll get back to you within one business day.
       </p>

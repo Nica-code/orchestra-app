@@ -5,7 +5,7 @@ import { daysRemaining } from '@/lib/plans';
 import { DashboardShell } from '@/components/dashboard/DashboardShell';
 import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider';
 
-export const metadata: Metadata = { title: 'Dashboard — FirstCall' };
+export const metadata: Metadata = { title: 'Dashboard — Callscade' };
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getCurrentManager();

@@ -204,7 +204,7 @@ export function AddEditPositionModal({ open, onClose, onSaved, concertId, positi
               {existingPositionNames.map((p) => <option key={p} value={p} />)}
             </datalist>
           </div>
-          <Input label="How many musicians do you need for this position?" type="number" min={1} max={20}
+          <Input label="How many contacts do you need for this position?" type="number" min={1} max={20}
             value={needed} onChange={(e) => setNeeded(Number(e.target.value))} />
         </section>
 
@@ -225,7 +225,7 @@ export function AddEditPositionModal({ open, onClose, onSaved, concertId, positi
 
         {/* Section 3 — deadline */}
         <section>
-          <p className="mb-1 text-sm font-medium text-slate-700">How long should musicians have to respond?</p>
+          <p className="mb-1 text-sm font-medium text-slate-700">How long should contacts have to respond?</p>
           <label className="flex items-center gap-2 text-sm">
             <input type="radio" checked={deadlineType === 'days'} onChange={() => setDeadlineType('days')} />
             <span className="flex items-center gap-1.5">
@@ -250,7 +250,7 @@ export function AddEditPositionModal({ open, onClose, onSaved, concertId, positi
 
         {/* Section 4 — no response handling */}
         <section>
-          <p className="mb-1 text-sm font-medium text-slate-700">If a musician doesn&apos;t respond by the deadline:</p>
+          <p className="mb-1 text-sm font-medium text-slate-700">If a contact doesn&apos;t respond by the deadline:</p>
           <label className="flex items-center gap-2 text-sm">
             <input type="radio" checked={noResponseMode === 'auto'} onChange={() => setNoResponseMode('auto')} />
             Automatically contact the next musician
@@ -272,12 +272,12 @@ export function AddEditPositionModal({ open, onClose, onSaved, concertId, positi
 
         {/* Section 5 — musician list */}
         <section>
-          <p className="mb-1 text-sm font-medium text-slate-700">Musician List for This Position</p>
+          <p className="mb-1 text-sm font-medium text-slate-700">Contact List for This Position</p>
           {lockedList && (
-            <p className="mb-2 text-xs text-amber-600">Sending has started — the musician list is locked.</p>
+            <p className="mb-2 text-xs text-amber-600">Sending has started — the contact list is locked.</p>
           )}
           {loadingList ? (
-            <p className="text-sm text-slate-400">Loading musicians…</p>
+            <p className="text-sm text-slate-400">Loading contacts…</p>
           ) : musicians.length === 0 ? (
             <p className="text-sm text-slate-500">
               {positionName ? 'No musicians found for this position in your master list.' : 'Enter a position name to load musicians.'}

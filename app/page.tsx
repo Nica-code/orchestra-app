@@ -6,7 +6,7 @@ import { Check, ChevronDown, Menu, X } from 'lucide-react';
 import { track } from '@/lib/analytics';
 
 const STARTER_FEATURES = [
-  '1 manager account', '500 sends per month', 'Unlimited musicians',
+  '1 manager account', '500 sends per month', 'Unlimited contacts',
   'Gmail & Outlook integration', 'Custom email templates', 'Send history & logs', '30-day free trial',
 ];
 const PRO_FEATURES = [
@@ -14,18 +14,18 @@ const PRO_FEATURES = [
   'Priority support', '30-day free trial',
 ];
 const FEATURES = [
-  { title: 'Your Email, Your Identity', body: 'Gmail and Outlook integration. Emails come from you.' },
-  { title: 'Automatic Sequential Sending', body: 'Contacts musicians in ranked order. Moves on automatically.' },
-  { title: 'Custom Email Templates', body: 'Save your standard email. Names and details fill in automatically.' },
-  { title: 'Full Send History', body: 'See exactly who was contacted, when, and what they said.' },
-  { title: 'Multi-Manager Support', body: 'Multiple managers can share the same musician lists.' },
-  { title: 'Works on Any Device', body: 'Manage from your computer. Musicians respond from their phone.' },
+  { title: 'Your Email, Your Identity', body: 'Gmail and Outlook integration. Emails come from you, not a third-party platform.' },
+  { title: 'Automatic Cascade Sending', body: 'Works down your ranked list in order. Moves on automatically on decline or no response.' },
+  { title: 'Custom Email Templates', body: 'Save your standard message. Names, roles, and details fill in automatically.' },
+  { title: 'Full Send History', body: 'See exactly who was contacted, when, and how they responded.' },
+  { title: 'Multi-Manager Support', body: 'Multiple managers can share the same contact lists and outreach workflows.' },
+  { title: 'Works on Any Device', body: 'Manage from your computer. Contacts respond from their phone.' },
 ];
 const FAQS = [
-  { q: "Does it work with my orchestra's email address?", a: 'Yes. FirstCall connects to Gmail, Google Workspace, and Microsoft Outlook, so emails come from your real orchestra email address.' },
-  { q: 'Can multiple managers use the same account?', a: 'Yes. The Pro plan supports up to 3 managers sharing the same musician lists and concert management.' },
-  { q: 'What happens when a musician accepts?', a: "You receive an email notification immediately. The reply-to is set to the musician's address, so you can continue the conversation directly." },
-  { q: 'Can I import my existing musician list?', a: 'Yes. Upload any CSV or Excel file with your musician list and FirstCall will import it in minutes.' },
+  { q: 'Does it work with my existing email address?', a: 'Yes. Callscade connects to Gmail, Google Workspace, and Microsoft Outlook, so emails come from your real address — not a generic platform account.' },
+  { q: 'Can multiple managers use the same account?', a: 'Yes. The Pro plan supports up to 3 managers sharing the same contact lists and outreach workflows.' },
+  { q: 'What happens when someone accepts?', a: "You receive an email notification immediately. The reply-to is set to their address, so you can continue the conversation directly." },
+  { q: 'Can I import my existing contact list?', a: 'Yes. Upload any CSV or Excel file and Callscade will import it in minutes.' },
   { q: 'Is there a contract or commitment?', a: 'No. All plans are month-to-month. Cancel anytime with no fees.' },
   { q: 'What happens after the free trial?', a: 'After 30 days, your saved payment method will be charged. You can cancel before then with no charge.' },
 ];
@@ -45,7 +45,7 @@ export default function LandingPage() {
       {/* Nav */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <span className="text-lg font-bold text-indigo-600">FirstCall</span>
+          <span className="text-lg font-bold text-indigo-600">Callscade</span>
           <nav className="hidden items-center gap-4 sm:flex">
             <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">Sign In</Link>
             <Link href="/auth/signup" onClick={() => track('cta_clicked', { location: 'nav' })}
@@ -70,11 +70,11 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto max-w-4xl px-4 py-16 text-center sm:py-24">
         <h1 className="text-3xl font-bold tracking-tight sm:text-5xl">
-          Find Substitute Musicians. Stop Wasting Hours on Emails.
+          Send down your list until someone says yes.
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
-          FirstCall automates the process of contacting substitute musicians in ranked order —
-          so you can fill positions in minutes, not hours.
+          Callscade automates cascade outreach — contact your ranked list in order,
+          move on automatically on decline or no response, and fill roles in minutes instead of hours.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/auth/signup" onClick={() => track('cta_clicked', { location: 'hero' })}
@@ -90,7 +90,7 @@ export default function LandingPage() {
           <p className="font-medium text-slate-500">Ranked list → Email sent → Response</p>
           <div className="mt-3 space-y-2">
             <div className="rounded bg-white p-2 shadow-sm">1. Sarah Johnson — emailed ✓</div>
-            <div className="rounded bg-green-50 p-2 text-green-800">Sarah accepted — position filled ✓</div>
+            <div className="rounded bg-green-50 p-2 text-green-800">Sarah accepted — role filled ✓</div>
           </div>
         </div>
       </section>
@@ -98,7 +98,7 @@ export default function LandingPage() {
       {/* Social proof */}
       <section className="border-y border-slate-200 bg-slate-50 py-6">
         <p className="text-center text-sm text-slate-500">
-          Trusted by chamber orchestras, symphony orchestras, and ensembles across the United States
+          Trusted by teams that manage on-call rosters, event staffing, and availability-driven scheduling
         </p>
       </section>
 
@@ -107,8 +107,8 @@ export default function LandingPage() {
         <h2 className="text-center text-2xl font-bold sm:text-3xl">The old way is broken</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           {[
-            { t: 'Hours of manual emails', b: 'Contacting musicians one by one, waiting for each response before moving to the next.' },
-            { t: 'Missed performances', b: "Slow back-and-forth means positions go unfilled when musicians aren't available." },
+            { t: 'Hours of manual emails', b: 'Reaching out one by one, waiting for each response before moving to the next person.' },
+            { t: 'Roles go unfilled', b: "Slow back-and-forth means shifts and positions stay open when people aren't available." },
             { t: 'No tracking or history', b: 'No record of who was contacted, when, or why they declined.' },
           ].map((c) => (
             <div key={c.t} className="rounded-lg border border-slate-200 p-5">
@@ -125,9 +125,9 @@ export default function LandingPage() {
           <h2 className="text-center text-2xl font-bold sm:text-3xl">The new way</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
-              { n: 1, t: 'Build your ranked list', b: 'Import your substitute musicians from a spreadsheet. Rank them by preference for each position.' },
-              { n: 2, t: 'Start sending with one click', b: 'FirstCall emails your top-ranked available musician automatically, using your own email address.' },
-              { n: 3, t: 'Fill positions in minutes', b: 'Musicians accept or decline with one click. On decline, the next musician is contacted automatically.' },
+              { n: 1, t: 'Build your ranked list', b: 'Import your contacts from a spreadsheet. Rank them by preference for each role or shift.' },
+              { n: 2, t: 'Start the cascade with one click', b: 'Callscade emails your top-ranked available contact automatically, using your own email address.' },
+              { n: 3, t: 'Fill roles in minutes', b: 'Contacts accept or decline with one click. On decline or no response, the next person is contacted automatically.' },
             ].map((s) => (
               <div key={s.n} className="rounded-lg border border-slate-200 bg-white p-5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 font-bold text-white">{s.n}</div>
@@ -169,7 +169,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-slate-200 bg-white p-6">
-              <p className="text-sm font-medium text-slate-500">For small ensembles and chamber orchestras</p>
+              <p className="text-sm font-medium text-slate-500">For small teams and independent managers</p>
               <p className="mt-2 text-2xl font-bold">Starter</p>
               <p className="text-lg">{starterPrice}</p>
               <ul className="mt-4 space-y-2 text-sm">
@@ -184,7 +184,7 @@ export default function LandingPage() {
             </div>
             <div className="rounded-lg border-2 border-indigo-600 bg-white p-6">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-500">For professional orchestras</p>
+                <p className="text-sm font-medium text-slate-500">For growing teams with multiple managers</p>
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">Most Popular</span>
               </div>
               <p className="mt-2 text-2xl font-bold">Pro</p>
@@ -226,9 +226,9 @@ export default function LandingPage() {
       {/* Final CTA */}
       <section className="bg-indigo-600 py-16 text-center text-white">
         <div className="mx-auto max-w-2xl px-4">
-          <h2 className="text-2xl font-bold sm:text-3xl">Ready to stop chasing musicians?</h2>
+          <h2 className="text-2xl font-bold sm:text-3xl">Ready to stop chasing availability?</h2>
           <p className="mt-2 text-indigo-100">
-            Join orchestras that have automated their substitute musician process.
+            Join teams that have automated their on-call outreach with Callscade.
           </p>
           <Link href="/auth/signup" onClick={() => track('cta_clicked', { location: 'final' })}
             className="mt-6 inline-block rounded-md bg-white px-6 py-3 text-base font-semibold text-indigo-700 hover:bg-indigo-50">
@@ -244,15 +244,15 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200 py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 sm:flex-row">
           <div>
-            <p className="font-bold text-indigo-600">FirstCall</p>
-            <p className="text-xs text-slate-500">Automate substitute musician outreach.</p>
+            <p className="font-bold text-indigo-600">Callscade</p>
+            <p className="text-xs text-slate-500">Cascade outreach. Fill roles faster.</p>
           </div>
           <div className="flex gap-4 text-sm text-slate-600">
             <Link href="/privacy" className="hover:text-slate-900">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-slate-900">Terms of Service</Link>
             <Link href="/contact" className="hover:text-slate-900">Contact</Link>
           </div>
-          <p className="text-xs text-slate-400">© 2026 FirstCall. All rights reserved.</p>
+          <p className="text-xs text-slate-400">© 2026 Callscade. All rights reserved.</p>
         </div>
       </footer>
     </div>

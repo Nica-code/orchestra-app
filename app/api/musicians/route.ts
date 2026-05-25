@@ -4,14 +4,15 @@ import { getCurrentManager } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase-server';
 
 const createSchema = z.object({
-  first_name: z.string().min(1).max(100),
-  last_name: z.string().min(1).max(100),
-  email: z.string().email(),
-  phone: z.string().max(50).nullable().optional(),
-  position: z.string().min(1).max(120),
-  rank: z.number().int().min(1),
-  notes: z.string().max(500).nullable().optional(),
+  first_name:    z.string().min(1).max(100),
+  last_name:     z.string().min(1).max(100),
+  email:         z.string().email(),
+  phone:         z.string().max(50).nullable().optional(),
+  position:      z.string().max(120).optional().default(''),
+  rank:          z.number().int().min(1).optional().default(999),
+  notes:         z.string().max(500).nullable().optional(),
   is_blacklisted: z.boolean().optional(),
+  custom_fields: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
 // GET /api/musicians?search=&position=&status=&sort=&page=&limit=

@@ -6,7 +6,7 @@ import { createAdminClient } from './supabase-server';
 import type { NotificationPreferences } from '@/types';
 
 function fromAddress(): string {
-  return process.env.NOTIFY_FROM_EMAIL || 'FirstCall <onboarding@resend.dev>';
+  return process.env.NOTIFY_FROM_EMAIL || 'Callscade <onboarding@resend.dev>';
 }
 function appUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -18,7 +18,7 @@ interface EmailButton { label: string; url: string; }
 function renderEmail(title: string, paragraphs: string[], buttons: EmailButton[]): { html: string; text: string } {
   const html = `
     <div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px">
-      <p style="font-weight:700;color:#4f46e5;font-size:18px;margin:0 0 16px">FirstCall</p>
+      <p style="font-weight:700;color:#4f46e5;font-size:18px;margin:0 0 16px">Callscade</p>
       <h1 style="font-size:18px;color:#0f172a;margin:0 0 12px">${title}</h1>
       ${paragraphs.map((p) => `<p style="color:#334155;font-size:14px;line-height:1.6;margin:0 0 10px">${p}</p>`).join('')}
       <div style="margin-top:16px">
@@ -308,10 +308,10 @@ export async function notifyTrialEnding(params: {
     title: `Trial ends in ${params.daysRemaining} days`,
     message: 'Add a payment method to continue without interruption.',
     actionUrl: '/dashboard/settings/billing',
-    emailSubject: `Your FirstCall trial ends in ${params.daysRemaining} days`,
+    emailSubject: `Your Callscade trial ends in ${params.daysRemaining} days`,
     emailParagraphs: [
-      `Your free trial of FirstCall ${params.planType} ends in ${params.daysRemaining} days.`,
-      'To continue using FirstCall without interruption, please add a payment method.',
+      `Your free trial of Callscade ${params.planType} ends in ${params.daysRemaining} days.`,
+      'To continue using Callscade without interruption, please add a payment method.',
     ],
     emailButtons: [{ label: 'Add Payment Method', url: `${appUrl()}/dashboard/settings/billing` }],
   });
@@ -329,7 +329,7 @@ export async function notifyPaymentFailed(params: {
     actionUrl: '/dashboard/settings/billing',
     emailSubject: '⚠ Payment failed — Action required',
     emailParagraphs: [
-      `We were unable to process your payment for FirstCall ${params.planType}.`,
+      `We were unable to process your payment for Callscade ${params.planType}.`,
       'Please update your payment method to avoid service interruption.',
     ],
     emailButtons: [{ label: 'Update Payment Method', url: `${appUrl()}/dashboard/settings/billing` }],

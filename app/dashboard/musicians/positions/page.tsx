@@ -18,7 +18,7 @@ export default async function PositionsPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-2xl font-bold text-slate-900">Positions</h1>
-      <p className="mt-1 text-sm text-slate-600">Each position has its own ranked list of musicians.</p>
+      <p className="mt-1 text-sm text-slate-600">Each position has its own ranked list of contacts.</p>
 
       {positions.length === 0 ? (
         <p className="mt-8 text-center text-slate-500">
@@ -32,7 +32,7 @@ export default async function PositionsPage() {
                 <Users className="h-4 w-4 text-indigo-500" />
                 <span className="font-semibold">{position}</span>
               </div>
-              <p className="mt-1 text-sm text-slate-500">{count} musician{count === 1 ? '' : 's'}</p>
+              <p className="mt-1 text-sm text-slate-500">{count} contact${count === 1 ? '' : 's'}</p>
               <Link
                 href={`/dashboard/musicians/positions/${encodeURIComponent(position)}`}
                 className="mt-3 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-700"

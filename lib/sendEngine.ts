@@ -1,5 +1,5 @@
 /**
- * Send engine — the core of FirstCall.
+ * Send engine — the core of Callscade.
  * Sends ranked emails one at a time, processes responses, auto-advances.
  */
 import 'server-only';
@@ -152,60 +152,76 @@ export async function sendToNextMusician(
     totalContacted = count ?? 0;
   }
 
-  // Find the first eligible musician, skipping blacklisted / unavailable.
+  // Find the next eligible contact, respecting rank ties.
+  // Contacts sharing the same rank form a "tier" — within a tier, order is random.
+  // We skip tiers that are fully ineligible and pick the first tier with an eligible contact.
   type Row = {
     id: string; musician_id: string; rank: number;
     musicians: { first_name: string; last_name: string; email: string; is_blacklisted: boolean } | null;
   };
+  const rows = (queue ?? []) as unknown as Row[];
+
+  // Group pending rows into tiers by rank
+  const tierMap = new Map<number, Row[]>();
+  for (const row of rows) {
+    const bucket = tierMap.get(row.rank) ?? [];
+    bucket.push(row);
+    tierMap.set(row.rank, bucket);
+  }
+  const sortedRanks = [...tierMap.keys()].sort((a, b) => a - b);
+
+  const skipRow = async (raw: Row, reason: string) => {
+    await admin.from('concert_position_musicians')
+      .update({ status: 'skipped', skip_reason: reason }).eq('id', raw.id);
+    await admin.from('send_logs').insert({
+      concert_position_id: concertPositionId,
+      concert_position_musician_id: raw.id,
+      musician_id: raw.musician_id,
+      organization_id: ctx.organization.id,
+      status: 'skipped',
+      token: crypto.randomUUID(),
+      token_expires_at: new Date().toISOString(),
+      manager_id: managerId,
+      failure_reason: reason,
+    });
+    log('skip', { concertPositionId, musicianId: raw.musician_id, reason });
+  };
+
   let eligible: Row | null = null;
-  for (const raw of (queue ?? []) as unknown as Row[]) {
-    const m = raw.musicians;
-    if (!m) continue;
 
-    if (m.is_blacklisted) {
-      await admin.from('concert_position_musicians')
-        .update({ status: 'skipped', skip_reason: 'blacklisted' }).eq('id', raw.id);
-      await admin.from('send_logs').insert({
-        concert_position_id: concertPositionId,
-        concert_position_musician_id: raw.id,
-        musician_id: raw.musician_id,
-        organization_id: ctx.organization.id,
-        status: 'skipped',
-        token: crypto.randomUUID(),
-        token_expires_at: new Date().toISOString(),
-        manager_id: managerId,
-        failure_reason: 'blacklisted',
-      });
-      log('skip', { concertPositionId, musicianId: raw.musician_id, reason: 'blacklisted' });
-      continue;
+  tierLoop:
+  for (const rank of sortedRanks) {
+    const tier = tierMap.get(rank)!;
+    // Shuffle tier so tied contacts are contacted in random order within the tier
+    for (let i = tier.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tier[i], tier[j]] = [tier[j], tier[i]];
     }
 
-    // availability across all concert dates
-    let unavailableReason: string | null = null;
-    for (const d of (ctx.concert.dates ?? []) as string[]) {
-      const a = await isMusicianAvailable(raw.musician_id, d);
-      if (!a.available) { unavailableReason = a.reason ?? 'unavailable'; break; }
-    }
-    if (unavailableReason) {
-      await admin.from('concert_position_musicians')
-        .update({ status: 'skipped', skip_reason: `unavailable: ${unavailableReason}` }).eq('id', raw.id);
-      await admin.from('send_logs').insert({
-        concert_position_id: concertPositionId,
-        concert_position_musician_id: raw.id,
-        musician_id: raw.musician_id,
-        organization_id: ctx.organization.id,
-        status: 'skipped',
-        token: crypto.randomUUID(),
-        token_expires_at: new Date().toISOString(),
-        manager_id: managerId,
-        failure_reason: `unavailable: ${unavailableReason}`,
-      });
-      log('skip', { concertPositionId, musicianId: raw.musician_id, reason: unavailableReason });
-      continue;
-    }
+    for (const raw of tier) {
+      const m = raw.musicians;
+      if (!m) continue;
 
-    eligible = raw;
-    break;
+      if (m.is_blacklisted) {
+        await skipRow(raw, 'blacklisted');
+        continue;
+      }
+
+      // Check availability across all concert dates
+      let unavailableReason: string | null = null;
+      for (const d of (ctx.concert.dates ?? []) as string[]) {
+        const a = await isMusicianAvailable(raw.musician_id, d);
+        if (!a.available) { unavailableReason = a.reason ?? 'unavailable'; break; }
+      }
+      if (unavailableReason) {
+        await skipRow(raw, `unavailable: ${unavailableReason}`);
+        continue;
+      }
+
+      eligible = raw;
+      break tierLoop;
+    }
+    // All contacts in this tier were skipped — continue to next tier
   }
 
   if (!eligible || !eligible.musicians) {

@@ -36,15 +36,15 @@ export function HistoryClient({ rows }: { rows: HistoryRow[] }) {
   return (
     <div className="mx-auto max-w-4xl">
       <Link href="/dashboard/concerts" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> Back to concerts
+        <ArrowLeft className="h-4 w-4" /> Back to projects
       </Link>
-      <h1 className="mt-3 text-2xl font-bold text-slate-900">Past Concerts</h1>
+      <h1 className="mt-3 text-2xl font-bold text-slate-900">Past Projects</h1>
 
       <div className="mt-4 flex flex-wrap gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by concert name…"
+          placeholder="Search by project name…"
           className="flex-1 min-w-[200px] rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
         <select value={status} onChange={(e) => setStatus(e.target.value)}
@@ -59,7 +59,7 @@ export function HistoryClient({ rows }: { rows: HistoryRow[] }) {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
             <tr>
-              <th className="px-4 py-3">Concert</th>
+              <th className="px-4 py-3">Project</th>
               <th className="px-4 py-3">Dates</th>
               <th className="px-4 py-3">Positions</th>
               <th className="px-4 py-3">Fill Rate</th>
@@ -68,7 +68,7 @@ export function HistoryClient({ rows }: { rows: HistoryRow[] }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">No past concerts.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-500">No past projects.</td></tr>
             )}
             {filtered.map((r) => (
               <tr key={r.id}>

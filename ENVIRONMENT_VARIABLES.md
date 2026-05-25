@@ -1,4 +1,4 @@
-# FirstCall — Environment Variables
+# Callscade — Environment Variables
 
 Copy `.env.example` to `.env.local` and fill in the values below.
 `NEXT_PUBLIC_*` variables are exposed to the browser — never put secrets in them.
@@ -50,7 +50,7 @@ Copy `.env.example` to `.env.local` and fill in the values below.
 ## App — required
 | Variable | Notes | Client-safe |
 |---|---|---|
-| `NEXT_PUBLIC_APP_URL` | Public site URL (e.g. `https://firstcall.app`) | Yes |
+| `NEXT_PUBLIC_APP_URL` | Public site URL (e.g. `https://callscade.app`) | Yes |
 | `ENCRYPTION_KEY` | 32-character random string — encrypts SMTP passwords. **Never change once set.** | No |
 | `CRON_SECRET` | Random string — authenticates Vercel Cron requests. Set the same value in Vercel. | No |
 

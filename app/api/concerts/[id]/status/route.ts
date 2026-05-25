@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { loadOwnedConcert } from '@/lib/concertAuth';
-import type { ConcertStatus } from '@/types';
+import type { ProjectStatus } from '@/types';
 
-const schema = z.object({ status: z.enum(['draft', 'active', 'completed', 'cancelled']) });
+const schema = z.object({ status: z.enum(['draft', 'active', 'filled', 'completed', 'cancelled']) });
 
 // Allowed transitions
-const TRANSITIONS: Record<ConcertStatus, ConcertStatus[]> = {
-  draft: ['active', 'cancelled'],
-  active: ['completed', 'cancelled'],
+const TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
+  draft:     ['active', 'cancelled'],
+  active:    ['filled', 'completed', 'cancelled'],
+  filled:    ['closed' as ProjectStatus, 'cancelled'],
   completed: [],
   cancelled: [],
 };
@@ -22,7 +23,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try { body = schema.parse(await req.json()); }
   catch (e) { return NextResponse.json({ error: 'Invalid input', details: (e as z.ZodError).issues }, { status: 400 }); }
 
-  const current = concert!.status as ConcertStatus;
+  const current = concert!.status as ProjectStatus;
   const next = body.status;
   if (current === next) return NextResponse.json({ concert });
   if (!TRANSITIONS[current].includes(next)) {

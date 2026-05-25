@@ -8,7 +8,7 @@ context lives, and what's already been done.
 
 ## PASTE THIS:
 
-I'm continuing work on **FirstCall** (working title), a Next.js 14 + Supabase
+I'm continuing work on **Callscade** (working title), a Next.js 14 + Supabase
 SaaS for orchestra managers that automates substitute musician outreach.
 Managers build ranked musician lists; the app emails them one at a time and
 auto-advances on decline / no-response.

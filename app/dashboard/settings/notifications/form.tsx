@@ -15,8 +15,8 @@ interface Row {
 }
 
 const ROWS: Row[] = [
-  { label: 'Musician Accepted', emailKey: 'accepted_email', inappKey: 'accepted_inapp' },
-  { label: 'Musician Declined', emailKey: 'declined_email', inappKey: 'declined_inapp' },
+  { label: 'Contact Accepted', emailKey: 'accepted_email', inappKey: 'accepted_inapp' },
+  { label: 'Contact Declined', emailKey: 'declined_email', inappKey: 'declined_inapp' },
   { label: 'No Response (deadline passed)', emailKey: 'no_response_email', inappKey: 'no_response_inapp' },
   { label: 'Position Exhausted', emailKey: 'exhausted_email', inappKey: 'exhausted_inapp' },
   { label: 'Email Send Failed', emailKey: null, inappKey: null, note: 'Send failure alerts cannot be disabled' },

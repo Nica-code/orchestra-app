@@ -46,9 +46,9 @@ export default async function DashboardHome() {
   }
 
   const cards = [
-    { label: 'Active Concerts', value: stats.activeConcerts, sub: 'In progress', accent: 'text-slate-900' },
+    { label: 'Active Projects', value: stats.activeConcerts, sub: 'In progress', accent: 'text-slate-900' },
     { label: 'Positions Being Filled', value: stats.positionsBeingFilled, sub: 'Awaiting responses', accent: 'text-slate-900' },
-    { label: 'Filled Today', value: stats.filledToday, sub: 'Musicians confirmed', accent: 'text-green-600' },
+    { label: 'Filled Today', value: stats.filledToday, sub: 'Contacts confirmed', accent: 'text-green-600' },
     { label: 'Pending Responses', value: stats.pendingResponses, sub: 'Awaiting reply', accent: 'text-amber-600' },
   ];
 
@@ -87,21 +87,21 @@ export default async function DashboardHome() {
       </Link>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/dashboard/concerts/new"><Button>New Concert</Button></Link>
-        <Link href="/dashboard/musicians/import"><Button variant="secondary">Import Musicians</Button></Link>
+        <Link href="/dashboard/concerts/new"><Button>New Project</Button></Link>
+        <Link href="/dashboard/musicians/import"><Button variant="secondary">Import Contacts</Button></Link>
         <Link href="/dashboard/templates"><Button variant="secondary">View Templates</Button></Link>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-lg border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">Active Concerts</h2>
+            <h2 className="font-semibold text-slate-900">Active Projects</h2>
             <Link href="/dashboard/concerts" className="text-sm font-medium text-indigo-600 hover:underline">View All</Link>
           </div>
           {(concerts ?? []).length === 0 ? (
             <div className="mt-3 text-center">
-              <p className="text-sm text-slate-500">No active concerts</p>
-              <Link href="/dashboard/concerts/new" className="mt-3 inline-block"><Button>Create Concert</Button></Link>
+              <p className="text-sm text-slate-500">No active projects</p>
+              <Link href="/dashboard/concerts/new" className="mt-3 inline-block"><Button>Create Project</Button></Link>
             </div>
           ) : (
             <ul className="mt-3 space-y-3">

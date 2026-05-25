@@ -4,14 +4,15 @@ import { getCurrentManager } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase-server';
 
 const updateSchema = z.object({
-  first_name: z.string().min(1).max(100).optional(),
-  last_name: z.string().min(1).max(100).optional(),
-  email: z.string().email().optional(),
-  phone: z.string().max(50).nullable().optional(),
-  position: z.string().min(1).max(120).optional(),
-  rank: z.number().int().min(1).optional(),
-  notes: z.string().max(500).nullable().optional(),
+  first_name:    z.string().min(1).max(100).optional(),
+  last_name:     z.string().min(1).max(100).optional(),
+  email:         z.string().email().optional(),
+  phone:         z.string().max(50).nullable().optional(),
+  position:      z.string().max(120).optional(),
+  rank:          z.number().int().min(1).optional(),
+  notes:         z.string().max(500).nullable().optional(),
   is_blacklisted: z.boolean().optional(),
+  custom_fields: z.record(z.string(), z.unknown()).optional(),
 });
 
 async function loadOwned(id: string) {

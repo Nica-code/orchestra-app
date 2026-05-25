@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export const metadata = { title: 'Privacy Policy — FirstCall' };
+export const metadata = { title: 'Privacy Policy — Callscade' };
 
 export default function PrivacyPage() {
   return (

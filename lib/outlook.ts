@@ -4,7 +4,7 @@
  * MANUAL SETUP (Azure Portal):
  *   1. Go to https://portal.azure.com
  *   2. Microsoft Entra ID -> App registrations -> New registration
- *   3. Name it "FirstCall"
+ *   3. Name it "Callscade"
  *   4. Supported account types:
  *        "Accounts in any organizational directory and personal Microsoft accounts"
  *   5. Add a Web redirect URI:

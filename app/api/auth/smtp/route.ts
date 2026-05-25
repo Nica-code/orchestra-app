@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     await transport.sendMail({
       from: body.from_name ? `"${body.from_name}" <${body.from_email}>` : body.from_email,
       to: body.from_email,
-      subject: '✓ FirstCall — SMTP test',
+      subject: '✓ Callscade — SMTP test',
       html: '<p>Your SMTP configuration works. You can save it now.</p>',
     });
   } catch (err) {

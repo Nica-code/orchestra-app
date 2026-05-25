@@ -1,8 +1,8 @@
-# FirstCall
+# Callscade
 
-A web SaaS that helps orchestra managers automate finding substitute musicians.
-Managers build ranked musician lists, and FirstCall emails them one at a time —
-automatically advancing to the next musician on decline or no-response.
+A web SaaS for cascade outreach — send down your ranked contact list until
+someone says yes. Managers build ranked lists and Callscade emails them one at
+a time, automatically advancing to the next person on decline or no-response.
 
 ## Tech stack
 
@@ -21,7 +21,7 @@ automatically advancing to the next musician on decline or no-response.
 2. `npm install`
 3. Copy `.env.example` to `.env.local` and fill in values
    (see [ENVIRONMENT_VARIABLES.md](./ENVIRONMENT_VARIABLES.md)).
-4. Run the SQL migrations in `supabase/migrations/` in order, via the
+4. Run the SQL migrations in `supabase/migrations/` in order via the
    Supabase SQL Editor (001 → 011).
 5. `npm run dev` → http://localhost:3000
 

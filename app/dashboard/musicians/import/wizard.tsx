@@ -141,7 +141,7 @@ export function ImportWizard() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-bold text-slate-900">Import Musicians</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Import Contacts</h1>
       <p className="mt-1 text-sm text-slate-500">Step {step} of 4</p>
 
       {/* STEP 1 — Upload */}
@@ -257,7 +257,7 @@ export function ImportWizard() {
       {/* STEP 4 — Results */}
       {step === 4 && result && (
         <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
-          <p className="text-lg font-semibold text-green-700">Successfully imported {result.imported} musicians</p>
+          <p className="text-lg font-semibold text-green-700">Successfully imported {result.imported} contacts</p>
           {result.skipped > 0 && (
             <div className="mt-2">
               <p className="text-sm text-amber-700">{result.skipped} rows skipped due to errors.</p>
@@ -267,7 +267,7 @@ export function ImportWizard() {
             </div>
           )}
           <div className="mt-6 flex gap-3">
-            <Link href="/dashboard/musicians"><Button>View Musicians</Button></Link>
+            <Link href="/dashboard/musicians"><Button>View Contacts</Button></Link>
             <Button variant="secondary" onClick={reset}>Import Another File</Button>
           </div>
         </div>

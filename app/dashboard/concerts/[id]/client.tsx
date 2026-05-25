@@ -4,11 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, MapPin, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal, ConfirmDialog } from '@/components/ui/Modal';
 import { AddEditPositionModal } from '@/components/concerts/AddEditPositionModal';
-import { formatFullSchedule } from '@/lib/concertDates';
 import type { Concert, ConcertPosition } from '@/types';
 
 export interface PositionSummary {
@@ -113,7 +112,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
       const b = await res.json();
       if (!res.ok) { toast.error(b.error || 'Failed to start sending'); return; }
       if (b.sent) toast.success(`Email sent to ${b.musicianName}`);
-      else toast.warning(b.reason === 'exhausted' ? 'No eligible musicians on the list' : (b.reason || 'Nothing sent'));
+      else toast.warning(b.reason === 'exhausted' ? 'No eligible contacts on the list' : (b.reason || 'Nothing sent'));
       setStartTarget(null);
       refresh();
     } finally {
@@ -132,7 +131,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
       const b = await res.json();
       if (!res.ok) { toast.error(b.error || 'Failed to send'); return; }
       if (b.sent) toast.success(`Email sent to ${b.musicianName}`);
-      else toast.warning(b.reason === 'exhausted' ? 'No more eligible musicians' : (b.reason || 'Nothing sent'));
+      else toast.warning(b.reason === 'exhausted' ? 'No more eligible contacts' : (b.reason || 'Nothing sent'));
       refresh();
     } finally {
       setBusy(false);
@@ -155,16 +154,17 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
               {concert.status}
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">{formatFullSchedule(concert.dates, concert.rehearsal_dates)}</p>
-          {concert.venue && (
-            <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-500">
-              <MapPin className="h-3.5 w-3.5" /> {concert.venue}
-            </p>
+          {concert.notes && (
+            <p className="mt-1 text-sm text-slate-500">{concert.notes}</p>
           )}
+          <p className="mt-1 flex items-center gap-1 text-xs text-slate-400">
+            <Clock className="h-3 w-3" />
+            {concert.accept_deadline_hours}h response window per recipient
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => router.push(`/dashboard/concerts/${concert.id}/edit`)}>
-            <Pencil className="h-4 w-4" /> Edit Concert
+            <Pencil className="h-4 w-4" /> Edit Project
           </Button>
           <Button onClick={() => { setEditingPosition(null); setModalOpen(true); }}>
             <Plus className="h-4 w-4" /> Add Position
@@ -178,7 +178,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
           <div className="rounded-lg border border-dashed border-slate-300 p-10 text-center">
             <Users className="mx-auto h-9 w-9 text-slate-300" />
             <p className="mt-2 font-medium text-slate-700">No positions added yet</p>
-            <p className="mt-1 text-sm text-slate-500">Add your first position to start finding substitute musicians.</p>
+            <p className="mt-1 text-sm text-slate-500">Add a position and a recipient sequence to begin cascade outreach.</p>
             <Button className="mt-4" onClick={() => { setEditingPosition(null); setModalOpen(true); }}>
               <Plus className="h-4 w-4" /> Add Position
             </Button>
@@ -202,7 +202,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
                         </span>
                       </div>
                       <p className="mt-0.5 text-sm text-slate-500">
-                        {p.musicians_needed} musician{p.musicians_needed === 1 ? '' : 's'} needed · {s.total} on list
+                        {p.musicians_needed} contact{p.musicians_needed === 1 ? '' : 's'} needed · {s.total} in sequence
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -225,14 +225,15 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
                       {p.status === 'filled' && s.acceptedName ? (
                         <p>✓ Filled by {s.acceptedName}</p>
                       ) : p.status === 'exhausted' ? (
-                        <p>⚠ All musicians contacted — none available</p>
+                        <p>⚠ All contacts have been tried — none available</p>
                       ) : live && live.current_musician ? (
                         <p>
-                          Awaiting response from {live.current_musician.name} ·{' '}
-                          {live.time_remaining ?? ''} · contacted {live.total_contacted} of {live.total_available}
+                          Awaiting response from <strong>{live.current_musician.name}</strong>
+                          {live.time_remaining ? ` · ${live.time_remaining} remaining` : ''} ·{' '}
+                          #{live.total_contacted} of {live.total_available} in sequence
                         </p>
                       ) : (
-                        <p>Contacted {live?.total_contacted ?? s.sent} of {live?.total_available ?? s.total} musicians</p>
+                        <p>Contacted {live?.total_contacted ?? s.sent} of {live?.total_available ?? s.total} in sequence</p>
                       )}
                     </div>
                   )}
@@ -243,7 +244,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
                       <Button size="sm" onClick={() => openStartDialog(p)}>Start Sending</Button>
                     )}
                     {awaitingManual && (
-                      <Button size="sm" onClick={() => sendNext(p)} loading={busy}>Send to Next Musician</Button>
+                      <Button size="sm" onClick={() => sendNext(p)} loading={busy}>Send to Next in Sequence</Button>
                     )}
                     {started && (
                       <Link href={`/dashboard/concerts/${concert.id}/positions/${p.id}/log`}>
@@ -283,7 +284,7 @@ export function ConcertDetailClient({ concert, positions, summaries, positionNam
           <div className="space-y-3 text-sm text-slate-700">
             <p>Start sending emails for <strong>{startTarget.position_name}</strong>?</p>
             <p>The first email will be sent to{' '}
-              <strong>{firstMusician ?? 'the #1 ranked musician'}</strong>.</p>
+              <strong>{firstMusician ?? 'contact #1 in the sequence'}</strong>.</p>
             <p>Response deadline: {deadlineText(startTarget)}</p>
             <p>Auto-send on no response:{' '}
               {startTarget.auto_resend_enabled

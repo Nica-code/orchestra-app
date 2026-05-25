@@ -131,7 +131,7 @@ export function EmailSettingsClient({ initialHealth }: { initialHealth: EmailHea
         onClose={() => setConfirmDisconnect(false)}
         onConfirm={disconnect}
         title="Disconnect email"
-        message="Disconnect this email account? You won't be able to send to musicians until you reconnect."
+        message="Disconnect this email account? You won't be able to send until you reconnect."
         confirmLabel="Disconnect"
         danger
       />

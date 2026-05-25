@@ -1,5 +1,5 @@
 // App-wide constants.
-export const APP_NAME = 'FirstCall';
+export const APP_NAME = 'Callscade';
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export const PLAN_LIMITS = {

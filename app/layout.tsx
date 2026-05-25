@@ -15,13 +15,13 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'FirstCall — Automate Substitute Musician Outreach',
+  title: 'Callscade — Automate Substitute Musician Outreach',
   description:
-    'Find substitute musicians faster. FirstCall automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
+    'Find substitute musicians faster. Callscade automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
   openGraph: {
-    title: 'FirstCall — Automate Substitute Musician Outreach',
+    title: 'Callscade — Automate Substitute Musician Outreach',
     description:
-      'Find substitute musicians faster. FirstCall automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
+      'Find substitute musicians faster. Callscade automates ranked email outreach so orchestra managers fill positions in minutes, not hours.',
     type: 'website',
   },
 };

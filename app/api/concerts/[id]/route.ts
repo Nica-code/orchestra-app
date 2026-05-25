@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { loadOwnedConcert } from '@/lib/concertAuth';
 
-const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  dates: z.array(z.string().regex(dateRe)).min(1).optional(),
-  rehearsal_dates: z.array(z.string().regex(dateRe)).nullable().optional(),
-  venue: z.string().max(200).nullable().optional(),
-  notes: z.string().max(2000).nullable().optional(),
-  status: z.enum(['draft', 'active', 'completed', 'cancelled']).optional(),
+  notes: z.string().max(5000).nullable().optional(),
+  template_id: z.string().uuid().nullable().optional(),
+  accept_deadline_hours: z.number().int().min(1).max(8760).optional(),
+  accept_deadline_text: z.string().max(500).nullable().optional(),
+  custom_variables: z.record(z.string(), z.string()).optional(),
+  status: z.enum(['draft', 'active', 'filled', 'completed', 'cancelled']).optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {

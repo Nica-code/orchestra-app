@@ -3,7 +3,7 @@ import { getCurrentUsage, getUsageHistory } from '@/lib/usage';
 import { daysRemaining } from '@/lib/plans';
 import { BillingClient } from './client';
 
-export const metadata = { title: 'Billing — FirstCall' };
+export const metadata = { title: 'Billing — Callscade' };
 
 export default async function BillingPage() {
   const { manager, plan } = await requireManager();
