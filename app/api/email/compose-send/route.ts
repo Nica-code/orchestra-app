@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       position_name:           'Primary',
       musicians_needed:        1,
       template_id:             templateId,
-      response_deadline_type:  deadlineDays ? 'days' : 'none',
+      response_deadline_type:  'days',
       response_deadline_days:  deadlineDays ?? 3650, // ~10 years if no deadline
       auto_resend_enabled:     body.send_mode === 'cascade',
       auto_resend_days:        deadlineDays ?? 3650,
