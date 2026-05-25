@@ -57,9 +57,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     pathname === href || pathname.startsWith(href + '/');
 
   const inEmail    = pathname.startsWith('/dashboard/email') ||
-                     pathname.startsWith('/dashboard/templates') ||
-                     pathname.startsWith('/dashboard/concerts') ||
-                     pathname.startsWith('/dashboard/email/sent');
+                     pathname.startsWith('/dashboard/templates');
   const inContacts = pathname.startsWith('/dashboard/musicians') ||
                      pathname.startsWith('/dashboard/groups');
   const inSettings = pathname.startsWith('/dashboard/settings');

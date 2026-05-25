@@ -263,7 +263,7 @@ function Step4Done({ onFinish, busy }: { onFinish: (to: string) => void; busy: b
       </div>
 
       <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-        <Button onClick={() => onFinish('/dashboard/concerts/new')} loading={busy} size="lg">
+        <Button onClick={() => onFinish('/dashboard/email/compose')} loading={busy} size="lg">
           Create Your First Concert
         </Button>
         <Button variant="secondary" onClick={() => onFinish('/dashboard')} size="lg">
