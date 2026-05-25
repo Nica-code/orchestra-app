@@ -113,18 +113,119 @@ export async function startSending(concertPositionId: string, managerId: string)
   // Note: we never hard-block on the send limit — overage is charged instead.
 
   await admin.from('concert_positions').update({ status: 'active' }).eq('id', concertPositionId);
-  log('startSending', { concertPositionId, managerId });
+  log('startSending', { concertPositionId, managerId, mode: ctx.position.send_mode });
   await logActivity({
     organizationId: ctx.organization.id, managerId, action: 'send_started',
     entityType: 'concert_position', entityId: concertPositionId,
-    details: { position_name: ctx.position.position_name, concert_name: ctx.concert.name },
+    details: { position_name: ctx.position.position_name, concert_name: ctx.concert.name, mode: ctx.position.send_mode ?? 'cascade' },
   });
+
+  if (ctx.position.send_mode === 'broadcast') {
+    const result = await broadcastSend(concertPositionId, managerId, ctx);
+    return { ok: true, sent: result.sent, musicianName: result.firstRecipient ?? undefined, reason: result.reason };
+  }
 
   const result = await sendToNextMusician(concertPositionId, managerId, 'manual');
   if (!result.sent) {
     return { ok: true, sent: false, reason: result.reason };
   }
   return { ok: true, sent: true, musicianName: result.musicianName };
+}
+
+/** Broadcast mode — send to ALL pending recipients simultaneously. */
+async function broadcastSend(
+  concertPositionId: string,
+  managerId: string,
+  ctx: NonNullable<Awaited<ReturnType<typeof loadPositionContext>>>,
+): Promise<{ sent: boolean; firstRecipient?: string | null; reason?: string }> {
+  const admin = createAdminClient();
+
+  const { data: queue } = await admin
+    .from('concert_position_musicians')
+    .select('*, musicians(first_name, last_name, email, is_blacklisted)')
+    .eq('concert_position_id', concertPositionId)
+    .eq('status', 'pending')
+    .order('rank');
+
+  type Row = {
+    id: string; musician_id: string; rank: number;
+    musicians: { first_name: string; last_name: string; email: string; is_blacklisted: boolean } | null;
+  };
+  const rows = (queue ?? []) as unknown as Row[];
+  if (rows.length === 0) return { sent: false, reason: 'No recipients' };
+
+  const deadlineDays = ctx.position.response_deadline_days ?? 2;
+  const expiresAt = new Date(Date.now() + deadlineDays * 24 * 60 * 60 * 1000);
+  const deadlineStr = format(expiresAt, "EEEE, MMMM d, yyyy 'at' h:mm a");
+  const attachments = await fetchAttachments(admin, ctx.position.template_id);
+
+  let firstRecipient: string | null = null;
+  let sentCount = 0;
+
+  for (const raw of rows) {
+    const m = raw.musicians;
+    if (!m || m.is_blacklisted) continue;
+
+    const musicianName = `${m.first_name} ${m.last_name}`;
+    const token = crypto.randomUUID();
+
+    const rendered = renderTemplate(
+      { subject: ctx.template!.subject, body: ctx.template!.body },
+      {
+        name: m.first_name, full_name: musicianName,
+        position: ctx.position.position_name,
+        concert_name: ctx.concert.name,
+        date: formatConcertDates(ctx.concert.dates),
+        venue: ctx.concert.venue ?? '',
+        deadline: deadlineStr,
+        organization_name: ctx.organization.name,
+      },
+      { missing: 'blank' },
+    );
+
+    const responseUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/response/${token}`;
+    const htmlBody =
+      `<div style="white-space:pre-wrap">${rendered.body}</div>` +
+      `<br><br><div>———————————————————</div>` +
+      `<div>Please respond using the buttons on this page:</div>` +
+      `<div><a href="${responseUrl}">→ Click here to accept or decline</a></div>` +
+      `<div style="color:#888;font-size:12px">Please respond by ${deadlineStr}.</div>`;
+
+    let sendOk = true;
+    let failureReason: string | null = null;
+    try {
+      await sendEmail({ managerId, to: m.email, subject: rendered.subject, body: htmlBody, attachments });
+    } catch (err) {
+      sendOk = false;
+      failureReason = err instanceof Error ? err.message : 'Unknown send error';
+    }
+
+    await admin.from('send_logs').insert({
+      concert_position_id: concertPositionId,
+      concert_position_musician_id: raw.id,
+      musician_id: raw.musician_id,
+      organization_id: ctx.organization.id,
+      status: sendOk ? 'sent' : 'failed',
+      token,
+      token_expires_at: expiresAt.toISOString(),
+      sent_at: sendOk ? new Date().toISOString() : null,
+      email_subject: rendered.subject,
+      email_body: htmlBody,
+      manager_id: managerId,
+      failure_reason: failureReason,
+    });
+
+    if (sendOk) {
+      await admin.from('concert_position_musicians')
+        .update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', raw.id);
+      await incrementSendCount(ctx.organization.id);
+      if (!firstRecipient) firstRecipient = musicianName;
+      sentCount++;
+    }
+  }
+
+  log('broadcastSent', { concertPositionId, sentCount });
+  return { sent: sentCount > 0, firstRecipient, reason: sentCount === 0 ? 'All sends failed' : undefined };
 }
 
 /** STEP 7.2 / Function 2 — send to the next eligible musician by rank. */
@@ -395,6 +496,56 @@ export async function processResponse(
         concertId: ctx.concert.id,
       });
     }
+
+    // Broadcast mode: expire all other pending send_logs and notify other recipients
+    if (ctx && ctx.position.send_mode === 'broadcast') {
+      const { data: otherLogs } = await admin
+        .from('send_logs')
+        .select('id, token, musician_id')
+        .eq('concert_position_id', sendLog.concert_position_id)
+        .eq('status', 'sent')
+        .neq('id', sendLog.id);
+
+      if (otherLogs && otherLogs.length > 0) {
+        // Expire their tokens
+        await admin.from('send_logs')
+          .update({ token_used_at: new Date().toISOString(), status: 'skipped', skip_reason: 'position_filled_by_other' })
+          .in('id', otherLogs.map((l) => l.id));
+
+        // Also update concert_position_musicians status
+        await admin.from('concert_position_musicians')
+          .update({ status: 'skipped', skip_reason: 'position_filled_by_other' })
+          .eq('concert_position_id', sendLog.concert_position_id)
+          .eq('status', 'sent')
+          .neq('musician_id', sendLog.musician_id);
+
+        // Send "position filled" courtesy email to each other recipient
+        const filledMessage = ctx.concert.filled_message ||
+          `Thank you for considering this opportunity. Someone else has accepted the position, so we're all set for now. We truly appreciate your time and will keep you in mind for future opportunities.`;
+
+        for (const other of otherLogs) {
+          const { data: otherMusician } = await admin
+            .from('musicians').select('first_name, last_name, email').eq('id', other.musician_id).maybeSingle();
+          if (!otherMusician) continue;
+          const filledUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/response/${other.token}`;
+          const body =
+            `<p>Hi ${otherMusician.first_name},</p>` +
+            `<p>${filledMessage}</p>` +
+            `<p style="color:#888;font-size:12px">This link is no longer active. <a href="${filledUrl}">View status</a></p>`;
+          try {
+            await sendEmail({
+              managerId: sendLog.manager_id,
+              to: otherMusician.email,
+              subject: `Position filled — ${ctx.concert.name}`,
+              body,
+            });
+          } catch {
+            // Best-effort; don't fail the whole accept flow
+          }
+        }
+      }
+    }
+
     if (ctx) {
       await logActivity({
         organizationId: ctx.organization.id, managerId: sendLog.manager_id, action: 'send_accepted',

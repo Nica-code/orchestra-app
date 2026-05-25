@@ -25,6 +25,8 @@ const schema = z.object({
   accept_deadline_hours: z.number().int().min(1).max(8760).default(48),
   accept_deadline_text: z.string().max(500).nullable().optional(),
   custom_variables: z.record(z.string(), z.string()).optional(),
+  send_mode: z.enum(['cascade', 'broadcast']).optional().default('cascade'),
+  filled_message: z.string().max(2000).nullable().optional(),
   save_as_draft: z.boolean().optional().default(false),
 });
 
@@ -51,6 +53,7 @@ export async function POST(req: NextRequest) {
       accept_deadline_hours: body.accept_deadline_hours,
       accept_deadline_text: body.accept_deadline_text ?? null,
       custom_variables: body.custom_variables ?? {},
+      filled_message: body.filled_message ?? null,
       status: body.save_as_draft ? 'draft' : 'active',
     })
     .select()
@@ -67,8 +70,9 @@ export async function POST(req: NextRequest) {
       template_id: body.template_id ?? null,
       response_deadline_type: 'days',
       response_deadline_days: Math.max(1, Math.ceil(body.accept_deadline_hours / 24)),
-      auto_resend_enabled: true,
+      auto_resend_enabled: body.send_mode === 'cascade',
       auto_resend_days: Math.max(1, Math.ceil(body.accept_deadline_hours / 24)),
+      send_mode: body.send_mode,
       status: 'pending',
     })
     .select()

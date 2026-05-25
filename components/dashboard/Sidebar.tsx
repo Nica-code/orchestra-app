@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import { Home, Mail, Users, Settings, X, ListOrdered, Clock, FileText, Pencil } from 'lucide-react';
 
 const emailSubNav = [
-  { href: '/dashboard/email/compose', label: 'New Email', icon: Pencil },
+  { href: '/dashboard/email/compose', label: 'Compose New Message', icon: Pencil },
+  { href: '/dashboard/email/sent',    label: 'Sent', icon: Clock },
   { href: '/dashboard/templates',     label: 'Templates', icon: FileText },
-  { href: '/dashboard/concerts/history', label: 'History', icon: Clock },
 ];
 
 const contactsSubNav = [
@@ -57,7 +57,8 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
 
   const inEmail    = pathname.startsWith('/dashboard/email') ||
                      pathname.startsWith('/dashboard/templates') ||
-                     pathname.startsWith('/dashboard/concerts');
+                     pathname.startsWith('/dashboard/concerts') ||
+                     pathname.startsWith('/dashboard/email/sent');
   const inContacts = pathname.startsWith('/dashboard/musicians') ||
                      pathname.startsWith('/dashboard/groups');
   const inSettings = pathname.startsWith('/dashboard/settings');

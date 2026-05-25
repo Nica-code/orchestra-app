@@ -445,6 +445,11 @@ export default function ComposePage() {
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [groups, setGroups] = useState<RecipientGroupWithCount[]>([]);
+  const [sendMode, setSendMode] = useState<'cascade' | 'broadcast'>('cascade');
+  const [filledMessage, setFilledMessage] = useState(
+    `Thank you for considering this opportunity. Someone else has accepted the position, so we're all set for now. We truly appreciate your time and will keep you in mind for future opportunities.`
+  );
+  const [showFilledMsg, setShowFilledMsg] = useState(false);
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
 
@@ -521,6 +526,8 @@ export default function ComposePage() {
           recipients: recipients.map((r) => ({ musician_id: r.musician_id, name: r.name, email: r.email, rank: r.rank })),
           template_id: templateId || null,
           accept_deadline_hours: deadlineHours,
+          send_mode: sendMode,
+          filled_message: sendMode === 'broadcast' ? filledMessage : undefined,
           save_as_draft: saveAsDraft,
         }),
       });
@@ -619,6 +626,73 @@ export default function ComposePage() {
             {deadlineHours}h deadline
           </button>
         </div>
+
+        {/* Send mode toggle */}
+        <div className="flex items-stretch border-b border-slate-100">
+          <button
+            type="button"
+            onClick={() => setSendMode('cascade')}
+            className={`flex-1 px-4 py-2.5 text-left text-sm transition-colors ${
+              sendMode === 'cascade'
+                ? 'bg-indigo-50 font-medium text-indigo-700'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <span className="font-semibold">⬇ Cascade</span>
+            <span className="ml-2 text-xs opacity-70">Send one at a time, next gets it if previous declines</span>
+          </button>
+          <div className="w-px bg-slate-100" />
+          <button
+            type="button"
+            onClick={() => { setSendMode('broadcast'); setShowFilledMsg(true); }}
+            className={`flex-1 px-4 py-2.5 text-left text-sm transition-colors ${
+              sendMode === 'broadcast'
+                ? 'bg-amber-50 font-medium text-amber-700'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <span className="font-semibold">📡 Broadcast</span>
+            <span className="ml-2 text-xs opacity-70">Send to everyone at once — first to accept wins</span>
+          </button>
+        </div>
+
+        {/* Broadcast: editable "position filled" message */}
+        {sendMode === 'broadcast' && showFilledMsg && (
+          <div className="border-b border-amber-100 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-semibold text-amber-800">
+                Message sent to others once someone accepts
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowFilledMsg(false)}
+                className="text-amber-400 hover:text-amber-700 text-xs"
+              >
+                hide
+              </button>
+            </div>
+            <textarea
+              value={filledMessage}
+              onChange={(e) => setFilledMessage(e.target.value)}
+              rows={3}
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 resize-none"
+            />
+            <p className="mt-1 text-xs text-amber-600">
+              Their response links will be blocked and this message will appear when they open it.
+            </p>
+          </div>
+        )}
+        {sendMode === 'broadcast' && !showFilledMsg && (
+          <div className="border-b border-slate-100 bg-amber-50 px-4 py-2">
+            <button
+              type="button"
+              onClick={() => setShowFilledMsg(true)}
+              className="text-xs text-amber-600 hover:text-amber-800"
+            >
+              ✎ Edit "position filled" message
+            </button>
+          </div>
+        )}
 
         {/* Deadline picker (expandable) */}
         {showDeadline && (

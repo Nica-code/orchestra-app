@@ -45,6 +45,32 @@ export default async function ResponsePage({ params }: { params: { token: string
 
   const orgName = organization?.name ?? 'the orchestra';
 
+  // Broadcast mode: position filled by someone else
+  if (sendLog.skip_reason === 'position_filled_by_other') {
+    const filledMessage = concert?.filled_message ||
+      `Thank you for considering this opportunity. Someone else has accepted the position, so we're all set for now. We truly appreciate your time and will keep you in mind for future opportunities.`;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
+        <div className="w-full max-w-[480px]">
+          <div className="rounded-xl bg-white p-6 shadow-sm text-center">
+            <div className="text-center mb-4">
+              {organization?.logo_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={organization.logo_url} alt={orgName} className="mx-auto h-12 w-12 rounded object-cover" />
+                : <p className="text-lg font-bold text-indigo-600">{orgName}</p>}
+            </div>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 mb-4">
+              <span className="text-3xl">✓</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">Position Filled</h1>
+            <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">{filledMessage}</p>
+            <p className="mt-4 text-xs text-slate-400">{orgName} · {concert?.name}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (sendLog.token_used_at) {
     const when = sendLog.responded_at ? format(new Date(sendLog.responded_at), 'MMMM d, yyyy') : '';
     const verb = sendLog.status === 'accepted' ? 'accepted' : 'declined';
