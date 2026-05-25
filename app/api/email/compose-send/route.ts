@@ -64,7 +64,8 @@ export async function POST(req: NextRequest) {
         subject: body.subject,
         body: body.body,
         is_default: false,
-        is_one_off: true,   // hidden from Templates list
+        // is_one_off omitted intentionally — column added by migration 016;
+        // templates API already filters these out by name prefix
       })
       .select('id')
       .single();

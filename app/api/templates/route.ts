@@ -24,8 +24,13 @@ export async function GET() {
     .order('updated_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Hide auto-generated one-off templates (is_one_off may not exist yet before migration 016)
-  const visible = (templates ?? []).filter((t) => !(t as { is_one_off?: boolean }).is_one_off);
+  // Hide auto-generated compose templates: filter by is_one_off flag (migration 016)
+  // OR by name prefix "[Compose] " (works even before migration 016 is applied)
+  const visible = (templates ?? []).filter((t) => {
+    if ((t as { is_one_off?: boolean }).is_one_off) return false;
+    if (t.name.startsWith('[Compose] ')) return false;
+    return true;
+  });
   const ids = visible.map((t) => t.id);
   const counts = new Map<string, number>();
   if (ids.length > 0) {
